@@ -514,8 +514,23 @@ button { font: inherit; cursor: pointer; touch-action: manipulation; }
 .review-row { display: flex; align-items: baseline; gap: 11px; }
 .review-label {
   font-family: -apple-system, system-ui, sans-serif; font-size: 11px;
-  text-transform: uppercase; letter-spacing: .07em; font-weight: 600;
-  color: var(--label-2); width: 32px; text-align: right; flex-shrink: 0;
+  text-transform: uppercase; letter-spacing: .06em; font-weight: 600;
+  color: var(--label-2); width: 62px; text-align: right; flex-shrink: 0;
+  line-height: 1.2;
+}
+
+/* Uitleg in gewone taal onder de twee woorden */
+.mistakes {
+  list-style: none; margin: 10px 0 0; padding: 10px 0 0;
+  border-top: 1px solid var(--separator);
+  font-family: -apple-system, system-ui, sans-serif;
+  font-size: 14px; color: var(--label-2); text-align: left;
+  display: flex; flex-direction: column; gap: 3px;
+}
+.mistakes li { position: relative; padding-left: 15px; }
+.mistakes li::before {
+  content: ""; position: absolute; left: 3px; top: .62em;
+  width: 5px; height: 5px; border-radius: 50%; background: var(--red);
 }
 .review-word { font-size: 22px; letter-spacing: .04em; white-space: pre-wrap; text-align: left; font-weight: 600; }
 .review-word .d-ok { color: var(--label); }

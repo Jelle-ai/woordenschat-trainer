@@ -44,8 +44,46 @@ function normalize(s) {
   return t;
 }
 
+// Wat tussen haakjes staat ("le chien (m.)", "de auto (wagen)") is een
+// verduidelijking. Je mag het meetypen, maar het hoeft niet.
+function stripParens(s) {
+  return String(s)
+    .replace(/\s*[([{][^)\]}]*[)\]}]\s*/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+// De vormen die als juist antwoord tellen: met en zonder de haakjes.
+function acceptedForms(target) {
+  const full = String(target);
+  const bare = stripParens(full);
+  return bare && bare !== full ? [full, bare] : [full];
+}
+
 function isMatch(typed, target) {
-  return normalize(typed) === normalize(target);
+  const t = normalize(typed);
+  return acceptedForms(target).some((form) => normalize(form) === t);
+}
+
+// Voor het nakijkscherm: vergelijk met de vorm die het dichtst bij het
+// antwoord ligt, zodat niet-getypte haakjes niet als fouten oplichten.
+function closestForm(attempt, target) {
+  const forms = acceptedForms(target);
+  if (forms.length === 1) return forms[0];
+  const cost = (f) => alignWords(attempt, f).filter((o) => o.op !== "match").length;
+  return cost(forms[1]) < cost(forms[0]) ? forms[1] : forms[0];
+}
+
+// Posities die bij een toelichting tussen haakjes horen.
+function parenMask(chars) {
+  const mask = new Array(chars.length).fill(false);
+  let depth = 0;
+  chars.forEach((ch, i) => {
+    if (ch === "(" || ch === "[" || ch === "{") { depth++; mask[i] = true; return; }
+    if (ch === ")" || ch === "]" || ch === "}") { if (depth > 0) { mask[i] = true; depth--; } return; }
+    if (depth > 0) mask[i] = true;
+  });
+  return mask;
 }
 
 function isLetter(ch) {
@@ -197,7 +235,7 @@ function bumpStat(fr, key) {
 }
 
 // ================= LEERMODUS: letters achter bubbels =================
-const learn = { chars: [], slots: [], pos: 0, done: false };
+const learn = { chars: [], auto: [], slots: [], pos: 0, done: false };
 
 function startLearn() {
   showScreen("screen-learn");
@@ -212,9 +250,12 @@ function showLearnWord() {
   $("learn-hint").textContent = "Typ de letters — weet je het niet? Druk op Enter voor één letter.";
 
   learn.chars = Array.from(fr);
+  const inParens = parenMask(learn.chars);
+  // Geen bubbel voor leestekens en voor alles wat tussen haakjes staat.
+  learn.auto = learn.chars.map((ch, i) => !isLetter(ch) || inParens[i]);
   learn.pos = 0;
   learn.done = false;
-  learn.slots = buildBubbles($("learn-bubbles"), learn.chars);
+  learn.slots = buildBubbles($("learn-bubbles"), learn.chars, learn.auto);
 
   skipAutoChars();
   markCurrent();
@@ -235,7 +276,7 @@ function sizeBubbles(container, count) {
   container.style.setProperty("--slot", size + "px");
 }
 
-function buildBubbles(container, chars) {
+function buildBubbles(container, chars, auto) {
   container.innerHTML = "";
   sizeBubbles(container, chars.length);
   const slots = [];
@@ -244,7 +285,7 @@ function buildBubbles(container, chars) {
     slot.className = "slot";
     slot.style.setProperty("--i", idx);
     slot.appendChild(span(ch === " " ? " " : ch, "letter"));
-    if (isLetter(ch)) {
+    if (!auto[idx]) {
       slot.appendChild(span("", "bubble"));
     } else {
       slot.classList.add("auto", "popped");
@@ -257,7 +298,7 @@ function buildBubbles(container, chars) {
 }
 
 function skipAutoChars() {
-  while (learn.pos < learn.chars.length && !isLetter(learn.chars[learn.pos])) learn.pos++;
+  while (learn.pos < learn.chars.length && learn.auto[learn.pos]) learn.pos++;
 }
 
 function markCurrent() {
@@ -340,7 +381,7 @@ function currentDrill() {
 function drillProgressText() {
   const total = session.batch.length * CORRECT_NEEDED;
   const left = session.queue.reduce((sum, it) => sum + it.left, 0);
-  return `Nog ${left} van ${total} goede antwoorden`;
+  return `${left} van ${total} te gaan`;
 }
 
 function nextDrillWord() {
@@ -391,10 +432,60 @@ function setDrillState(state, attempt) {
     stageEl.textContent = "nakijken";
     $("drill-type-area").classList.add("hidden");
     reviewEl.classList.remove("hidden");
-    renderDiff(alignWords(attempt || "", fr));
+    const vorm = closestForm(attempt || "", fr);
+    const ops = alignWords(attempt || "", vorm);
+    renderDiff(ops);
+    renderNotes(ops, attempt || "");
     $("drill-hint").textContent = "Enter om verder te gaan";
   }
   input.focus();
+}
+
+// Zet de verschillen om in gewone taal, zodat je niet alleen kleuren ziet
+// maar ook leest wat er precies misging.
+function describeOps(ops) {
+  const zichtbaar = (t) => (t.trim() === "" ? "een spatie" : `"${t}"`);
+  const notes = [];
+  let i = 0;
+  while (i < ops.length) {
+    if (ops[i].op === "match") { i++; continue; }
+    let j = i;
+    while (j < ops.length && ops[j].op === ops[i].op) j++;
+    const groep = ops.slice(i, j);
+
+    if (ops[i].op === "sub") {
+      const jij = groep.map((o) => o.ch).join("");
+      const juist = groep.map((o) => o.expected).join("");
+      const zelfdeLetter = groep.every((o) => foldChar(o.ch) === foldChar(o.expected));
+      notes.push(
+        zelfdeLetter
+          ? `het accent klopt niet: ${zichtbaar(juist)} in plaats van ${zichtbaar(jij)}`
+          : `${zichtbaar(jij)} moet ${zichtbaar(juist)} zijn`
+      );
+    } else if (ops[i].op === "ins") {
+      notes.push(`${zichtbaar(groep.map((o) => o.ch).join(""))} hoort er niet bij`);
+    } else {
+      notes.push(`${zichtbaar(groep.map((o) => o.expected).join(""))} ontbreekt`);
+    }
+    i = j;
+  }
+  return notes;
+}
+
+function renderNotes(ops, attempt) {
+  const el = $("review-notes");
+  el.innerHTML = "";
+  const notes = attempt.trim() === "" ? ["je hebt niets getypt"] : describeOps(ops);
+  notes.slice(0, 4).forEach((text) => {
+    const li = document.createElement("li");
+    li.textContent = text;
+    el.appendChild(li);
+  });
+  if (notes.length > 4) {
+    const li = document.createElement("li");
+    li.textContent = `en nog ${notes.length - 4} verschil${notes.length - 4 === 1 ? "" : "len"}`;
+    el.appendChild(li);
+  }
 }
 
 function renderDiff(ops) {

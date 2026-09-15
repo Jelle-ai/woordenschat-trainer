@@ -52,7 +52,7 @@ Loopt het mis, dan is er één vaste route terug:
 | situatie | wat er gebeurt |
 | --- | --- |
 | **je weet het niet** | 2× **Enter** op een leeg veld → het woord verschijnt klein onder het invulveld |
-| **je antwoordt fout** | je ziet het juiste woord, met jouw antwoord eronder en de fouten in het rood |
+| **je antwoordt fout** | je ziet het juiste woord, met jouw antwoord eronder, de fouten in het rood en eronder in gewone taal wat er misging (`"a" moet "e" zijn`, `"n" ontbreekt`, `het accent klopt niet`) |
 
 Daarna in beide gevallen hetzelfde: **overtypen** (met het woord in beeld en
 letter-voor-letter kleuring), en meteen erna **nog eens uit het hoofd**, nu
@@ -99,6 +99,9 @@ bewaard.
   bewaard
 - Accentknoppen (é è ê ç œ …) en een keuze tussen streng of soepel op accenten
   — standaard soepel, dus `le velo` telt voor `le vélo`
+- Wat tussen haakjes staat is een toelichting en hoef je niet mee te typen:
+  bij `le chien (m.)` telt `le chien` gewoon als juist. In de bubbelmodus staat
+  dat deel meteen in beeld, zonder bubbels.
 - Eigen lijsten zelf typen via **Zelf een lijst typen**: één paar per regel met
   een `=` ertussen (`le chien = de hond`). Terwijl je typt zie je hoeveel paren
   er herkend worden en welke regels nog geen `=` hebben. Een tab of puntkomma
