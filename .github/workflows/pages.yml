@@ -16,11 +16,10 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+  controle:
     runs-on: ubuntu-latest
+    outputs:
+      klaar: ${{ steps.pages.outputs.klaar }}
     steps:
       - uses: actions/checkout@v4
 
@@ -34,16 +33,34 @@ jobs:
                    vendor/tesseract/tesseract-core-simd-lstm.wasm.js \
                    vendor/tesseract/lang/fra.traineddata.gz \
                    vendor/tesseract/lang/nld.traineddata.gz; do
-            [ -f "$f" ] || { echo "ontbreekt: $f"; exit 1; }
+            [ -f "$f" ] || { echo "::error::ontbreekt: $f"; exit 1; }
           done
-          node --check app.js
-          node --check ocr.js
-          node --check storage.js
-          node --check words.js
-          node --check sw.js
+          for f in app.js ocr.js storage.js words.js sw.js; do node --check "$f"; done
           node -e "JSON.parse(require('fs').readFileSync('manifest.json','utf8'))"
-          echo "alles aanwezig"
+          echo "alle bestanden aanwezig en scripts parsen"
 
+      - id: pages
+        name: Staat Pages ingesteld op GitHub Actions?
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          soort=$(gh api "repos/$GITHUB_REPOSITORY/pages" --jq .build_type 2>/dev/null || echo "uit")
+          if [ "$soort" = "workflow" ]; then
+            echo "klaar=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "klaar=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Pages staat op '$soort' in plaats van 'workflow', dus deze workflow publiceert nog niet. Zet Settings -> Pages -> Source op 'GitHub Actions' om vanaf main te publiceren. Zolang dat niet gebeurd is, publiceert Pages vanaf de branch die daar nu ingesteld staat."
+          fi
+
+  deploy:
+    needs: controle
+    if: needs.controle.outputs.klaar == 'true'
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

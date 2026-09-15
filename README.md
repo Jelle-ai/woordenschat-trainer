@@ -87,9 +87,16 @@ weg naar een schermvullende app.
 
 ## Deployen
 
-`main` wordt automatisch gepubliceerd op GitHub Pages via
-`.github/workflows/pages.yml`. Zet daarvoor eenmalig in de repo
-**Settings → Pages → Source** op **GitHub Actions**.
+De app staat op GitHub Pages. Om vanaf `main` te publiceren is er één
+instelling nodig in de repo: **Settings → Pages → Source** op
+**GitHub Actions** zetten. Daarna publiceert `.github/workflows/pages.yml`
+elke push naar `main`, met vooraf een controle dat alle bestanden aanwezig
+zijn en de scripts parsen.
+
+Staat die instelling nog op *Deploy from a branch*, dan slaat de workflow het
+publiceren over met een uitleg in de logs, en blijft Pages publiceren vanaf de
+branch die daar ingesteld staat. (Even goed alternatief: laat de bron op
+*Deploy from a branch* staan en kies daar `main`.)
 
 ## Lokaal draaien
 
