@@ -150,7 +150,10 @@
         </button>
       </div>
 
-      <p id="progress-summary" class="footnote"></p>
+      <div class="list-progress">
+        <span class="footnote">Voortgang in deze lijst</span>
+        <div class="progress" id="progress-summary" role="progressbar" aria-label="Voortgang in deze lijst" aria-valuemin="0" aria-valuemax="100"><span class="progress-fill"></span></div>
+      </div>
     </section>
 
     <!-- ===== Woordenlijst bewerken ===== -->
@@ -249,7 +252,7 @@ manger = eten</pre>
           <svg width="19" height="19"><use href="#i-back"/></svg>
         </button>
         <span class="mode-tag learn-tag">Leren</span>
-        <span id="learn-progress" class="topbar-note"></span>
+        <div class="progress" id="learn-progress" role="progressbar" aria-label="Voortgang in deze ronde" aria-valuemin="0" aria-valuemax="100"><span class="progress-fill"></span></div>
         <button class="topbar-btn" data-settings type="button" title="Instellingen" aria-label="Instellingen">
           <svg width="19" height="19"><use href="#i-gear"/></svg>
         </button>
@@ -272,7 +275,7 @@ manger = eten</pre>
           <svg width="19" height="19"><use href="#i-back"/></svg>
         </button>
         <span class="mode-tag drill-tag">Oefenen</span>
-        <span id="drill-progress" class="topbar-note"></span>
+        <div class="progress" id="drill-progress" role="progressbar" aria-label="Voortgang in deze ronde" aria-valuemin="0" aria-valuemax="100"><span class="progress-fill"></span></div>
         <button class="topbar-btn" data-settings type="button" title="Instellingen" aria-label="Instellingen">
           <svg width="19" height="19"><use href="#i-gear"/></svg>
         </button>

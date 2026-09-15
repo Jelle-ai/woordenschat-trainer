@@ -359,6 +359,23 @@ button { font: inherit; cursor: pointer; touch-action: manipulation; }
 .topbar .topbar-note { margin-left: auto; text-align: right; }
 .topbar-note { color: var(--label-2); font-size: 14px; }
 
+/* Voortgangsbalk: laat zien hoe ver je bent, zonder cijfers. */
+.progress {
+  flex: 1; min-width: 40px; height: 7px;
+  background: var(--fill); border-radius: 999px; overflow: hidden;
+}
+.progress-fill {
+  display: block; height: 100%; width: 0;
+  border-radius: 999px;
+  background: var(--blue);
+  transition: width .45s var(--ease);
+}
+#screen-learn .progress-fill { background: var(--learn); }
+#screen-drill .progress-fill { background: var(--drill); }
+
+.list-progress { margin: 20px 0 0; padding: 0 16px; display: flex; flex-direction: column; gap: 7px; }
+.list-progress .footnote { margin: 0; }
+
 .mode-tag {
   font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em;
   padding: 5px 13px; border-radius: 999px; color: #fff;
@@ -617,7 +634,7 @@ button { font: inherit; cursor: pointer; touch-action: manipulation; }
   white-space: pre-wrap; overflow-x: auto;
 }
 #editor-count.warn { color: var(--orange); }
-#progress-summary { margin: 18px 0 0; padding: 0 16px; }
+
 
 .sentence-row { grid-template-columns: 1fr 1fr; font-size: 15px; }
 #sentence-list { margin-bottom: 12px; }

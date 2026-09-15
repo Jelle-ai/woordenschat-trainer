@@ -5,7 +5,9 @@ let settings = Storage.getSettings();
 let stats = Storage.getStats();
 let activeList = Storage.getList(Storage.activeId());
 
-const CORRECT_NEEDED = 2; // aantal keer foutloos uit het hoofd per ronde
+// Elk woord wordt één keer gevraagd. Wat je fout hebt of met hulp deed, gaat
+// terug in de rij en komt later in de ronde opnieuw langs.
+const CORRECT_NEEDED = 1;
 
 // Een woord in een ronde is [frans, nederlands, richting]. Het Franse woord is
 // altijd element 0 en dient als sleutel voor de voortgang, ongeacht de richting.
@@ -246,7 +248,7 @@ function showLearnWord() {
   const w = session.batch[session.learnIndex];
   const fr = targetOf(w);
   $("learn-nl").textContent = promptOf(w);
-  $("learn-progress").textContent = `Woord ${session.learnIndex + 1} van ${session.batch.length}`;
+  setProgress($("learn-progress"), session.learnIndex / session.batch.length);
   $("learn-hint").textContent = "Typ de letters — weet je het niet? Druk op Enter voor één letter.";
 
   learn.chars = Array.from(fr);
@@ -378,10 +380,17 @@ function currentDrill() {
   return session.queue[0];
 }
 
-function drillProgressText() {
-  const total = session.batch.length * CORRECT_NEEDED;
-  const left = session.queue.reduce((sum, it) => sum + it.left, 0);
-  return `${left} van ${total} te gaan`;
+// Zet een balk op een deel tussen 0 en 1.
+function setProgress(el, fraction) {
+  const pct = Math.max(0, Math.min(1, fraction || 0)) * 100;
+  el.querySelector(".progress-fill").style.width = pct + "%";
+  el.setAttribute("aria-valuenow", Math.round(pct));
+}
+
+// Woorden die de rij uit zijn, gedeeld door het totaal.
+function drillProgress() {
+  const total = session.batch.length;
+  return total ? (total - session.queue.length) / total : 0;
 }
 
 function nextDrillWord() {
@@ -390,7 +399,7 @@ function nextDrillWord() {
     return;
   }
   $("drill-nl").textContent = promptOf(currentDrill().w);
-  $("drill-progress").textContent = drillProgressText();
+  setProgress($("drill-progress"), drillProgress());
   setDrillState(ANSWER);
 }
 
@@ -414,7 +423,8 @@ function setDrillState(state, attempt) {
   if (state === ANSWER) {
     stageEl.className = "stage-tag hidden";
     renderTyped(typedEl, "", null);
-    $("drill-hint").textContent = "Typ de Franse vertaling · weet je het niet? 2× Enter";
+    const taal = typingFrench(currentDrill().w) ? "Franse" : "Nederlandse";
+    $("drill-hint").textContent = `Typ de ${taal} vertaling · weet je het niet? 2× Enter`;
   } else if (state === COPY) {
     stageEl.className = "stage-tag is-copy";
     stageEl.textContent = "overtypen";
@@ -593,7 +603,7 @@ function flashCorrect(fr) {
   $("drill-hint").textContent = "";
   $("drill-stage").className = "stage-tag hidden";
   $("drill-reveal").classList.add("hidden");
-  $("drill-progress").textContent = drillProgressText();
+  setProgress($("drill-progress"), drillProgress());
   session.state = "pause";
   setTimeout(nextDrillWord, 550);
 }
@@ -670,7 +680,7 @@ function svgIcon(name, size) {
 function updateSummary() {
   const total = activeList.words.length;
   const known = activeList.words.filter(([fr]) => (stats[fr] || {}).correct >= CORRECT_NEEDED).length;
-  $("progress-summary").textContent = `${known} van ${total} woorden al eens goed geoefend.`;
+  setProgress($("progress-summary"), total ? known / total : 0);
   const note = `${total} woord${total === 1 ? "" : "en"}`;
   $("learn-all-note").textContent = note;
   $("drill-all-note").textContent = note;

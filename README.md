@@ -45,7 +45,9 @@ letter. Je typt de letters:
 **2. Drillen — uit het hoofd**
 
 Nu zie je alleen het Nederlandse woord en typ je de Franse vertaling blind.
-Elk woord moet 2× foutloos uit het hoofd voordat het uit de ronde verdwijnt.
+Elk woord wordt één keer gevraagd. Heb je het goed, dan is het klaar; had je
+het fout of gebruikte je hulp, dan gaat het terug in de rij en komt het later
+in de ronde opnieuw langs.
 
 Loopt het mis, dan is er één vaste route terug:
 
@@ -56,8 +58,8 @@ Loopt het mis, dan is er één vaste route terug:
 
 Daarna in beide gevallen hetzelfde: **overtypen** (met het woord in beeld en
 letter-voor-letter kleuring), en meteen erna **nog eens uit het hoofd**, nu
-zonder hulp. De teller van dat woord gaat terug naar 0, dus het komt later in
-de ronde gewoon terug.
+zonder hulp. Daarmee is het woord nog niet af: het gaat achteraan in de rij en
+komt later in de ronde nog een keer terug.
 
 ## Screenshots van je woordenlijst importeren
 
@@ -94,6 +96,8 @@ bewaard.
 
 ## Verder
 
+- Voortgang wordt met balken getoond, niet met cijfers: één in de kopbalk voor
+  de huidige ronde en één op het startscherm voor de hele lijst
 - Woorden per ronde instelbaar (5–15)
 - De minst gekende woorden komen als eerste aan bod; voortgang per woord wordt
   bewaard
