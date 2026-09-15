@@ -7,6 +7,18 @@ let activeList = Storage.getList(Storage.activeId());
 
 const CORRECT_NEEDED = 2; // aantal keer foutloos uit het hoofd per ronde
 
+// Een woord in een ronde is [frans, nederlands, richting]. Het Franse woord is
+// altijd element 0 en dient als sleutel voor de voortgang, ongeacht de richting.
+function keyOf(w) { return w[0]; }
+function targetOf(w) { return w[2] === "fr-nl" ? w[1] : w[0]; } // wat je typt
+function promptOf(w) { return w[2] === "fr-nl" ? w[0] : w[1]; } // wat je ziet
+function typingFrench(w) { return w[2] !== "fr-nl"; }
+
+function pickDirection() {
+  if (settings.direction === "gemengd") return Math.random() < 0.5 ? "nl-fr" : "fr-nl";
+  return settings.direction === "fr-nl" ? "fr-nl" : "nl-fr";
+}
+
 // ---------- Tekstvergelijking ----------
 const LIGATURES = { œ: "o", Œ: "o", æ: "a", Æ: "a" };
 
@@ -104,16 +116,27 @@ function showScreen(id) {
 }
 
 // Getypte tekst tonen; met target erbij kleurt elke letter groen of rood.
-function renderTyped(el, typed, target) {
+// caret is de plek van de cursor in letters geteld; zonder waarde staat hij
+// achteraan. Zo loopt het streepje mee als je midden in een woord iets aanpast.
+function renderTyped(el, typed, target, caret) {
   el.innerHTML = "";
   const chars = Array.from(typed);
   const t = target == null ? null : Array.from(target);
+  const pos = caret == null ? chars.length : Math.max(0, Math.min(caret, chars.length));
   chars.forEach((ch, idx) => {
+    if (idx === pos) el.appendChild(span("", "cursor"));
     let cls = "";
     if (t) cls = idx < t.length && eqChar(ch, t[idx]) ? "ok" : "err";
     el.appendChild(span(ch, cls));
   });
-  el.appendChild(span("", "cursor"));
+  if (pos >= chars.length) el.appendChild(span("", "cursor"));
+}
+
+// selectionStart telt in UTF-16-eenheden; de weergave telt in letters.
+function caretIndex(input) {
+  const pos = input.selectionStart;
+  if (pos == null) return null;
+  return Array.from(String(input.value).slice(0, pos)).length;
 }
 
 function shake(el) {
@@ -145,10 +168,11 @@ function startSession(mode) {
     return;
   }
 
-  const batch =
+  const chosen =
     kind === "ronde"
       ? pickBatch(Math.min(settings.batchSize, activeList.words.length))
       : shuffle(activeList.words);
+  const batch = chosen.map(([fr, nl]) => [fr, nl, pickDirection()]);
 
   session = {
     mode: kind,
@@ -156,7 +180,7 @@ function startSession(mode) {
     learnIndex: 0,
     results: {},
   };
-  session.batch.forEach(([fr]) => (session.results[fr] = { errors: 0, hints: 0, helped: false }));
+  session.batch.forEach((w) => (session.results[keyOf(w)] = { errors: 0, hints: 0, helped: false }));
 
   if (kind === "oefenen") startDrill();
   else startLearn();
@@ -181,8 +205,9 @@ function startLearn() {
 }
 
 function showLearnWord() {
-  const [fr, nl] = session.batch[session.learnIndex];
-  $("learn-nl").textContent = nl;
+  const w = session.batch[session.learnIndex];
+  const fr = targetOf(w);
+  $("learn-nl").textContent = promptOf(w);
   $("learn-progress").textContent = `Woord ${session.learnIndex + 1} van ${session.batch.length}`;
   $("learn-hint").textContent = "Typ de letters — weet je het niet? Druk op Enter voor één letter.";
 
@@ -193,6 +218,7 @@ function showLearnWord() {
 
   skipAutoChars();
   markCurrent();
+  updateAccentBar();
 
   const input = $("learn-input");
   input.value = "";
@@ -290,8 +316,7 @@ function onLearnKeystrokes() {
 
 function onLearnEnter() {
   if (learn.done) return;
-  const [fr] = session.batch[session.learnIndex];
-  session.results[fr].hints++;
+  session.results[keyOf(session.batch[session.learnIndex])].hints++;
   advanceLearn(true);
 }
 
@@ -323,7 +348,7 @@ function nextDrillWord() {
     finishSession();
     return;
   }
-  $("drill-nl").textContent = currentDrill().w[1];
+  $("drill-nl").textContent = promptOf(currentDrill().w);
   $("drill-progress").textContent = drillProgressText();
   setDrillState(ANSWER);
 }
@@ -331,7 +356,8 @@ function nextDrillWord() {
 function setDrillState(state, attempt) {
   session.state = state;
   session.enterArmed = false;
-  const [fr] = currentDrill().w;
+  const fr = targetOf(currentDrill().w);
+  updateAccentBar();
   const input = $("drill-input");
   input.value = "";
 
@@ -395,16 +421,19 @@ function renderDiff(ops) {
 }
 
 function onDrillInput() {
-  const [fr] = currentDrill().w;
-  const value = $("drill-input").value;
+  if (!session || !session.queue || !session.queue.length) return;
+  const input = $("drill-input");
+  const fr = targetOf(currentDrill().w);
+  const value = input.value;
   if (value) session.enterArmed = false;
   // Alleen bij overtypen mag je meekijken of elke letter klopt.
-  renderTyped($("drill-typed"), value, session.state === COPY ? fr : null);
+  renderTyped($("drill-typed"), value, session.state === COPY ? fr : null, caretIndex(input));
 }
 
 function onDrillEnter() {
   const item = currentDrill();
-  const [fr] = item.w;
+  const fr = targetOf(item.w);
+  const key = keyOf(item.w);
   const typed = $("drill-input").value.trim();
 
   if (session.state === REVIEW) {
@@ -432,13 +461,13 @@ function onDrillEnter() {
 
   if (isMatch(typed, fr)) {
     if (session.state === ANSWER) {
-      bumpStat(fr, "correct");
+      bumpStat(key, "correct");
       item.left--;
       if (item.left <= 0) session.queue.shift();
       else session.queue.push(session.queue.shift());
     } else {
       // Uit het hoofd gelukt na hulp: telt niet als schone beurt, wel als vooruitgang.
-      bumpStat(fr, "correct");
+      bumpStat(key, "correct");
       item.left = CORRECT_NEEDED;
       session.queue.push(session.queue.shift());
     }
@@ -447,18 +476,18 @@ function onDrillEnter() {
   }
 
   // Fout antwoord
-  bumpStat(fr, "wrong");
-  session.results[fr].errors++;
-  session.results[fr].helped = true;
+  bumpStat(key, "wrong");
+  session.results[key].errors++;
+  session.results[key].helped = true;
   item.left = CORRECT_NEEDED;
   setDrillState(REVIEW, typed);
 }
 
 function giveUp(item) {
-  const [fr] = item.w;
-  bumpStat(fr, "wrong");
-  session.results[fr].hints++;
-  session.results[fr].helped = true;
+  const key = keyOf(item.w);
+  bumpStat(key, "wrong");
+  session.results[key].hints++;
+  session.results[key].helped = true;
   item.left = CORRECT_NEEDED;
   setDrillState(COPY);
 }
@@ -476,6 +505,19 @@ function flashCorrect(fr) {
   $("drill-progress").textContent = drillProgressText();
   session.state = "pause";
   setTimeout(nextDrillWord, 550);
+}
+
+// De accentknoppen helpen alleen bij het typen van Frans; bij Frans -> Nederlands
+// zijn ze overbodig. De instelling kan ze ook helemaal uitzetten.
+function updateAccentBar() {
+  const showLearn = settings.showAccents && session && session.batch.length
+    ? typingFrench(session.batch[Math.min(session.learnIndex, session.batch.length - 1)])
+    : settings.showAccents;
+  const showDrill = settings.showAccents && session && session.queue && session.queue.length
+    ? typingFrench(currentDrill().w)
+    : settings.showAccents;
+  document.querySelector('#screen-learn .accents').classList.toggle("hidden", !showLearn);
+  document.querySelector('#screen-drill .accents').classList.toggle("hidden", !showDrill);
 }
 
 // ---------- Resultaat ----------
@@ -543,6 +585,23 @@ function updateSummary() {
   $("drill-all-note").textContent = note;
 }
 
+// ---------- Welke kolom is het Frans? ----------
+// Dezelfde scores als bij het inlezen van screenshots, zodat een zelfgetypte
+// lijst met het Nederlands vooraan toch goed komt te staan.
+function frenchIsFirst(words) {
+  let asIs = 0;
+  let swapped = 0;
+  for (const [a, b] of words) {
+    asIs += OCR.frenchScore(a) + OCR.dutchScore(b);
+    swapped += OCR.frenchScore(b) + OCR.dutchScore(a);
+  }
+  return swapped <= asIs;
+}
+
+function orientWords(words) {
+  return frenchIsFirst(words) ? words : words.map(([a, b]) => [b, a]);
+}
+
 // ---------- Startscherm ----------
 function renderListSelect() {
   const sel = $("list-select");
@@ -562,6 +621,7 @@ function goHome() {
   renderListSelect();
   $("batch-size").value = String(settings.batchSize);
   $("strict-accents").checked = settings.strictAccents;
+  $("direction").value = settings.direction;
   showScreen("screen-start");
   updateSummary();
 }
@@ -595,6 +655,7 @@ function updateEditorCount() {
     return;
   }
   let text = `${pairs.length} woordpaar${pairs.length === 1 ? "" : "en"} herkend`;
+  if (pairs.length >= 2) text += frenchIsFirst(pairs) ? " · Frans staat links" : " · Frans staat rechts, wordt bij het opslaan omgedraaid";
   if (bad.length) text += ` · ${bad.length} regel${bad.length === 1 ? "" : "s"} zonder "=": ${bad.slice(0, 3).map((l) => `"${l}"`).join(", ")}`;
   el.textContent = text;
   el.classList.toggle("warn", bad.length > 0);
@@ -637,7 +698,7 @@ function saveWordList(asNew) {
     return;
   }
   const name = $("list-name-input").value.trim() || "Mijn lijst";
-  Storage.saveList({ id: asNew ? null : activeList.id, name, words });
+  Storage.saveList({ id: asNew ? null : activeList.id, name, words: orientWords(words) });
   goHome();
 }
 
@@ -799,6 +860,40 @@ function saveImportedList() {
   goHome();
 }
 
+// ---------- Instellingenmenu tijdens het oefenen ----------
+function openSheet() {
+  $("sheet-direction").value = settings.direction;
+  $("sheet-strict").checked = settings.strictAccents;
+  $("sheet-accentbar").checked = settings.showAccents;
+  $("sheet-backdrop").classList.remove("hidden");
+  $("sheet-close").focus();
+}
+
+function closeSheet() {
+  $("sheet-backdrop").classList.add("hidden");
+  const input = !$("screen-learn").classList.contains("hidden") ? $("learn-input")
+    : !$("screen-drill").classList.contains("hidden") ? $("drill-input")
+    : null;
+  if (input) input.focus();
+}
+
+// Een gewijzigde richting geldt meteen voor de rest van de ronde.
+function applyDirectionToSession() {
+  if (!session) return;
+  session.batch.forEach((w) => { w[2] = pickDirection(); });
+  if (!$("screen-learn").classList.contains("hidden")) {
+    showLearnWord();
+  } else if (!$("screen-drill").classList.contains("hidden") && session.queue && session.queue.length) {
+    nextDrillWord();
+  }
+}
+
+function backToStart() {
+  closeSheet();
+  session = null;
+  goHome();
+}
+
 // ---------- Accentknoppen ----------
 const ACCENT_CHARS = ["é", "è", "ê", "ë", "à", "â", "ç", "î", "ï", "ô", "û", "ù", "œ", "'"];
 
@@ -852,6 +947,36 @@ $("strict-accents").addEventListener("change", (e) => {
   Storage.saveSettings(settings);
 });
 
+document.querySelectorAll("[data-back]").forEach((b) => b.addEventListener("click", backToStart));
+document.querySelectorAll("[data-settings]").forEach((b) => b.addEventListener("click", openSheet));
+
+$("sheet-close").addEventListener("click", closeSheet);
+$("sheet-backdrop").addEventListener("click", (e) => { if (e.target === $("sheet-backdrop")) closeSheet(); });
+$("sheet-home").addEventListener("click", backToStart);
+$("sheet-restart").addEventListener("click", () => { closeSheet(); startSession(lastMode()); });
+
+$("sheet-direction").addEventListener("change", (e) => {
+  settings.direction = e.target.value;
+  Storage.saveSettings(settings);
+  $("direction").value = settings.direction;
+  applyDirectionToSession();
+});
+$("sheet-strict").addEventListener("change", (e) => {
+  settings.strictAccents = e.target.checked;
+  Storage.saveSettings(settings);
+  $("strict-accents").checked = e.target.checked;
+});
+$("sheet-accentbar").addEventListener("change", (e) => {
+  settings.showAccents = e.target.checked;
+  Storage.saveSettings(settings);
+  updateAccentBar();
+});
+
+$("direction").addEventListener("change", (e) => {
+  settings.direction = e.target.value;
+  Storage.saveSettings(settings);
+});
+
 $("btn-edit-words").addEventListener("click", openWordEditor);
 $("btn-new-list").addEventListener("click", openNewListEditor);
 $("words-input").addEventListener("input", updateEditorCount);
@@ -902,11 +1027,23 @@ document.addEventListener("paste", (e) => {
 
 $("learn-input").addEventListener("input", onLearnKeystrokes);
 $("drill-input").addEventListener("input", onDrillInput);
+["keyup", "click", "select", "focus"].forEach((ev) => $("drill-input").addEventListener(ev, onDrillInput));
+document.addEventListener("selectionchange", () => {
+  if (document.activeElement === $("drill-input")) onDrillInput();
+});
 
 // Toetsen worden op documentniveau afgehandeld: zo werkt Enter ook wanneer het
 // invoerveld even niet in beeld is (nakijkscherm) of de focus is weggeraakt.
 document.addEventListener("keydown", (e) => {
+  if (!$("sheet-backdrop").classList.contains("hidden")) {
+    if (e.key === "Escape") { e.preventDefault(); closeSheet(); }
+    return;
+  }
   if (e.metaKey || e.ctrlKey || e.altKey) return;
+  if (e.key === "Escape") {
+    const bezig = !$("screen-learn").classList.contains("hidden") || !$("screen-drill").classList.contains("hidden");
+    if (bezig) { e.preventDefault(); backToStart(); return; }
+  }
   const onLearn = !$("screen-learn").classList.contains("hidden");
   const onDrill = !$("screen-drill").classList.contains("hidden");
   if (!onLearn && !onDrill) return;
@@ -938,8 +1075,10 @@ $("screen-drill").addEventListener("click", () => $("drill-input").focus());
   const standalone =
     matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
 
-  if (!supported || standalone) return; // knop blijft verborgen
+  const sheetBtn = $("sheet-fullscreen");
+  if (!supported || standalone) return; // rijen blijven verborgen
   btn.classList.remove("hidden");
+  sheetBtn.classList.remove("hidden");
 
   function isFullscreen() {
     return !!(document.fullscreenElement || document.webkitFullscreenElement);
@@ -947,18 +1086,21 @@ $("screen-drill").addEventListener("click", () => $("drill-input").focus());
 
   function sync() {
     const on = isFullscreen();
-    btn.title = on ? "Volledig scherm verlaten" : "Volledig scherm";
-    btn.setAttribute("aria-label", btn.title);
-    btn.classList.toggle("active", on);
+    const label = on ? "Volledig scherm verlaten" : "Volledig scherm";
+    btn.title = label;
+    btn.querySelector(".row-label").textContent = label;
+    sheetBtn.querySelector(".row-label").textContent = label;
   }
 
-  btn.addEventListener("click", () => {
+  function toggle() {
     if (isFullscreen()) {
       (document.exitFullscreen || document.webkitExitFullscreen).call(document);
     } else {
       (root.requestFullscreen || root.webkitRequestFullscreen).call(root);
     }
-  });
+  }
+  btn.addEventListener("click", toggle);
+  sheetBtn.addEventListener("click", toggle);
 
   document.addEventListener("fullscreenchange", sync);
   document.addEventListener("webkitfullscreenchange", sync);

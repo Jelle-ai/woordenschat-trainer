@@ -90,6 +90,8 @@ const Storage = (() => {
     return {
       batchSize: s.batchSize || 7,
       strictAccents: !!s.strictAccents,
+      direction: s.direction || "nl-fr", // nl-fr, fr-nl of gemengd
+      showAccents: s.showAccents !== false,
     };
   }
 

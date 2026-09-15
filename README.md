@@ -12,6 +12,24 @@ in je browser.
   overhoring achteraf. Bedoeld om nieuwe woorden een eerste keer door te nemen.
 - **Lijst oefenen** — de hele lijst meteen uit het hoofd, zonder leerfase.
 
+Welke kolom het Frans is, zoekt de app zelf uit — op accenten, lidwoorden en
+typische uitgangen. Typ je een lijst met het Nederlands vooraan, dan meldt de
+teller dat en worden de kolommen bij het opslaan omgedraaid.
+
+## Tijdens het oefenen
+
+Linksboven staat een terugknop naar het startscherm (Escape doet hetzelfde),
+rechtsboven een tandwiel met instellingen die meteen ingaan:
+
+- **Richting** — Nederlands → Frans, Frans → Nederlands, of door elkaar. Een
+  wijziging geldt direct voor de rest van de ronde.
+- **Streng op accenten** en **Accentknoppen tonen**. De accentknoppen verdwijnen
+  vanzelf wanneer je Nederlands typt, want daar heb je ze niet voor nodig.
+- **Volledig scherm**, **Deze ronde opnieuw** en **Stoppen en terug naar start**.
+
+De voortgang per woord blijft altijd aan het Franse woord hangen, in welke
+richting je ook oefent.
+
 ## Hoe een ronde werkt
 
 **1. Leren — letters achter bubbels**
@@ -92,7 +110,9 @@ bewaard.
 De app volgt de vormgeving van iOS: zwevende panelen met matglas, gegroepeerde
 rijen zoals in de instellingen, de systeemkleuren van Apple en een donker thema
 dat automatisch meegaat met je toestel. Iconen zijn getekende SVG's, geen
-emoji's.
+emoji's. Op de laptop ziet het er hetzelfde uit als op de telefoon; het
+instellingenmenu schuift op een telefoon van onderen in en staat op een breed
+scherm als venster in het midden.
 
 ## Op de telefoon
 
