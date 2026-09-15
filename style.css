@@ -1,7 +1,7 @@
 * { box-sizing: border-box; }
 
 :root {
-  --bg: #f4f5f7;
+  --bg: #eef1f6;
   --card: #ffffff;
   --text: #1c2333;
   --muted: #6b7280;
@@ -9,8 +9,10 @@
   --accent-dark: #1e40af;
   --good: #16a34a;
   --bad: #dc2626;
+  --hint: #d97706;
   --learn: #7c3aed;
   --drill: #ea580c;
+  --line: #d9dee7;
 }
 
 body {
@@ -21,38 +23,39 @@ body {
   min-height: 100vh;
 }
 
-.app {
-  max-width: 560px;
-  margin: 0 auto;
-  padding: 24px 16px 48px;
-}
+.app { max-width: 620px; margin: 0 auto; padding: 24px 16px 56px; }
 
 h1 { font-size: 1.7rem; margin: 8px 0 4px; }
-h2 { font-size: 1.4rem; }
+h2 { font-size: 1.35rem; }
+h3 { font-size: 1.05rem; margin: 18px 0 8px; }
 .subtitle { color: var(--muted); margin-top: 0; }
 .muted { color: var(--muted); }
 .hidden { display: none !important; }
 
 .card {
   background: var(--card);
-  border-radius: 14px;
+  border-radius: 16px;
   padding: 24px;
-  box-shadow: 0 1px 4px rgba(0,0,0,.08);
+  box-shadow: 0 1px 4px rgba(20,30,60,.08);
   display: flex;
   flex-direction: column;
   gap: 14px;
 }
-
-.card.center { align-items: center; text-align: center; min-height: 260px; justify-content: center; }
+.card.center { align-items: center; text-align: center; min-height: 290px; justify-content: center; }
 
 label { font-weight: 600; }
-select {
-  font-size: 1rem;
-  padding: 8px;
-  border-radius: 8px;
-  border: 1px solid #d1d5db;
-}
 .checkbox { font-weight: 400; display: flex; gap: 8px; align-items: center; }
+
+select, .text-input {
+  font-size: 1rem;
+  padding: 9px 10px;
+  border-radius: 9px;
+  border: 1px solid var(--line);
+  background: white;
+  color: inherit;
+  font-family: inherit;
+  width: 100%;
+}
 
 button {
   font-size: 1rem;
@@ -61,14 +64,19 @@ button {
   border: none;
   cursor: pointer;
   font-weight: 600;
+  font-family: inherit;
 }
 button.primary { background: var(--accent); color: white; }
 button.primary:hover { background: var(--accent-dark); }
+button.primary:disabled { background: #9ca3af; cursor: not-allowed; }
 button.big { padding: 14px 18px; font-size: 1.1rem; }
 button.ghost { background: transparent; color: var(--accent); }
 button.ghost:hover { text-decoration: underline; }
+button.small { padding: 6px 10px; font-size: .9rem; }
 
-.row { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+.row { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; align-items: center; }
+.row.tight { margin-top: 0; }
+.row.tight select { flex: 1; }
 
 textarea {
   width: 100%;
@@ -77,99 +85,234 @@ textarea {
   font-size: .95rem;
   padding: 12px;
   border-radius: 10px;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--line);
   resize: vertical;
 }
 
-.topbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 14px;
-}
+.topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
 
 .mode-tag {
-  font-weight: 700;
-  font-size: .85rem;
-  text-transform: uppercase;
-  letter-spacing: .05em;
-  padding: 4px 12px;
-  border-radius: 999px;
-  color: white;
+  font-weight: 700; font-size: .8rem; text-transform: uppercase; letter-spacing: .05em;
+  padding: 4px 12px; border-radius: 999px; color: white;
 }
 .learn-tag { background: var(--learn); }
 .drill-tag { background: var(--drill); }
 
-.nl-word { font-size: 1.15rem; color: var(--muted); margin: 0; }
-.nl-word.big-nl { font-size: 1.6rem; color: var(--text); font-weight: 700; }
-.fr-word { font-size: 2rem; font-weight: 700; margin: 0; }
-.fr-word.feedback { color: var(--bad); font-size: 1.5rem; }
-.fr-word.feedback.good { color: var(--good); }
+.stage-tag {
+  font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em;
+  padding: 3px 10px; border-radius: 999px; color: white;
+}
+.stage-tag.copy { background: var(--hint); }
+.stage-tag.recall { background: var(--accent); }
+.stage-tag.review { background: var(--bad); }
 
-/* Getypte letters */
+.nl-word { font-size: 1.15rem; color: var(--muted); margin: 0; }
+.nl-word.big-nl { font-size: 1.65rem; color: var(--text); font-weight: 700; }
+
+/* ===== Bubbels ===== */
+.bubbles {
+  display: flex; flex-wrap: wrap; justify-content: center;
+  gap: 8px; margin: 10px 0 6px; min-height: 64px; align-items: center;
+}
+
+.slot {
+  position: relative;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 46px; height: 52px;
+  font-size: 1.7rem; font-weight: 700;
+  font-family: ui-monospace, "SF Mono", monospace;
+}
+.slot.space { width: 18px; }
+
+.letter {
+  position: relative; z-index: 1;
+  opacity: 0; transform: scale(.55);
+  transition: opacity .16s ease, transform .26s cubic-bezier(.3,1.5,.6,1);
+}
+/* Na het knappen staat de letter vóór de wegvliegende bubbel, zodat hij meteen scherp leesbaar is. */
+.slot.popped .letter { opacity: 1; transform: scale(1); z-index: 3; }
+.slot.hinted .letter { color: var(--hint); }
+.slot.auto .letter { color: var(--muted); }
+
+.bubble {
+  position: absolute; inset: 0; border-radius: 50%; z-index: 2;
+  border: 1px solid rgba(255,255,255,.7);
+  background:
+    radial-gradient(circle at 32% 26%, rgba(255,255,255,.98) 0%, rgba(255,255,255,.45) 16%, rgba(255,255,255,0) 42%),
+    radial-gradient(circle at 70% 78%, rgba(255,255,255,.55) 0%, rgba(255,255,255,0) 30%),
+    radial-gradient(circle at 50% 50%, rgba(125,211,252,.75), rgba(167,139,250,.7) 58%, rgba(244,114,182,.6));
+  box-shadow: inset 0 0 14px rgba(255,255,255,.75), 0 3px 10px rgba(80,80,160,.22);
+  animation: bubble-in .38s backwards cubic-bezier(.2,1.5,.5,1), bob 3s ease-in-out infinite;
+  animation-delay: calc(var(--i, 0) * 45ms), calc(var(--i, 0) * 120ms);
+}
+
+@keyframes bubble-in {
+  from { transform: scale(.2) translateY(14px); opacity: 0; }
+  to   { transform: scale(1) translateY(0); opacity: 1; }
+}
+@keyframes bob {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50%      { transform: translateY(-4px) scale(1.02); }
+}
+
+.slot.current .bubble {
+  box-shadow: inset 0 0 14px rgba(255,255,255,.8), 0 0 0 3px rgba(37,99,235,.35), 0 3px 12px rgba(37,99,235,.3);
+}
+
+.slot.popped .bubble {
+  animation: pop .3s cubic-bezier(.3,1.3,.6,1) forwards;
+  pointer-events: none;
+}
+@keyframes pop {
+  0%   { transform: scale(1); opacity: 1; }
+  45%  { transform: scale(1.25); opacity: .65; }
+  100% { transform: scale(1.6); opacity: 0; }
+}
+.slot.auto .bubble { display: none; }
+
+.slot.wrong .bubble {
+  animation: bubble-shake .45s ease;
+  background:
+    radial-gradient(circle at 32% 26%, rgba(255,255,255,.9) 0%, rgba(255,255,255,.3) 18%, rgba(255,255,255,0) 44%),
+    radial-gradient(circle at 50% 50%, rgba(252,165,165,.9), rgba(220,38,38,.75));
+  box-shadow: inset 0 0 12px rgba(255,255,255,.5), 0 0 0 3px rgba(220,38,38,.3);
+}
+@keyframes bubble-shake {
+  0%, 100% { transform: translateX(0) rotate(0); }
+  20% { transform: translateX(-5px) rotate(-7deg); }
+  40% { transform: translateX(5px) rotate(7deg); }
+  60% { transform: translateX(-4px) rotate(-5deg); }
+  80% { transform: translateX(4px) rotate(5deg); }
+}
+
+.bubbles.complete .letter { animation: cheer .5s ease; }
+@keyframes cheer {
+  0%, 100% { transform: scale(1); }
+  40% { transform: scale(1.25) translateY(-4px); color: var(--good); }
+}
+
+/* ===== Getypte tekst ===== */
 .typed {
   font-family: ui-monospace, "SF Mono", monospace;
-  font-size: 1.8rem;
-  letter-spacing: .06em;
-  min-height: 2.4rem;
-  border-bottom: 3px solid #d1d5db;
-  min-width: 220px;
-  padding: 4px 8px;
-  white-space: pre-wrap;
-  word-break: break-all;
+  font-size: 1.8rem; letter-spacing: .06em;
+  min-height: 2.4rem; border-bottom: 3px solid var(--line);
+  width: 100%; padding: 4px 8px;
+  white-space: pre-wrap; word-break: break-word;
 }
 .typed .ok { color: var(--good); }
 .typed .err { color: var(--bad); background: #fee2e2; border-radius: 3px; }
+.typed .flash-ok { color: var(--good); }
 .typed .cursor {
-  display: inline-block;
-  width: 2px;
-  height: 1.6rem;
-  background: var(--accent);
-  vertical-align: text-bottom;
+  display: inline-block; width: 2px; height: 1.6rem;
+  background: var(--accent); vertical-align: text-bottom;
   animation: blink 1s step-end infinite;
 }
 @keyframes blink { 50% { opacity: 0; } }
 
-.hidden-input {
-  position: absolute;
-  opacity: 0;
-  pointer-events: none;
-  width: 1px;
-  height: 1px;
+/* Het woord dat je moet overtypen: klein, onder het invulveld */
+.reveal {
+  font-family: ui-monospace, monospace;
+  font-size: .95rem; letter-spacing: .08em;
+  color: var(--hint); background: #fffbeb;
+  border: 1px dashed #fcd34d; border-radius: 8px;
+  padding: 4px 12px; margin: 0;
 }
 
-.hint { font-size: .85rem; color: var(--muted); margin: 0; }
-
-/* Accentknoppen */
-.accents {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  justify-content: center;
-  margin-top: 14px;
+/* ===== Nakijken: juist woord met jouw fouten eronder ===== */
+.review {
+  display: flex; flex-direction: column; gap: 6px;
+  font-family: ui-monospace, "SF Mono", monospace;
+  background: #fafbfc; border: 1px solid var(--line);
+  border-radius: 10px; padding: 12px 14px;
 }
+.review-row { display: flex; align-items: baseline; gap: 10px; }
+.review-label {
+  font-family: system-ui, sans-serif; font-size: .7rem; text-transform: uppercase;
+  letter-spacing: .08em; color: var(--muted); width: 34px; text-align: right; flex-shrink: 0;
+}
+.review-word { font-size: 1.45rem; letter-spacing: .06em; white-space: pre-wrap; text-align: left; }
+.review-word .d-ok { color: var(--text); }
+.review-word .d-bad { color: var(--bad); background: #fee2e2; border-radius: 3px; }
+.review-word .d-missed { color: var(--good); background: #dcfce7; border-radius: 3px; }
+.review-word .d-gap { display: inline-block; width: 1ch; }
+
+.hint { font-size: .85rem; color: var(--muted); margin: 0; min-height: 1.2em; }
+
+/* Het invoerveld is onzichtbaar, maar wél zo groot als de weergave eronder.
+   Een veld van 1x1px lijkt te werken, maar daarin zet de browser de cursor
+   terug op positie 0 zodra een teken via compositie binnenkomt — dan wordt
+   "la fenêtre" met een dode toets "trela fenê". Vandaar de volle grootte.
+   Meteen ook handig op de telefoon: tikken op de weergave opent het toetsenbord. */
+.type-area { position: relative; width: 100%; max-width: 420px; min-height: 2.9rem; }
+.capture {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  opacity: 0; border: 0; padding: 0; margin: 0; background: transparent;
+  font-family: inherit; font-size: 1.8rem; text-align: center; color: inherit;
+}
+.hidden-file { display: none; }
+
+/* ===== Accentknoppen ===== */
+.accents { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-top: 14px; }
 .accents button {
-  background: var(--card);
-  border: 1px solid #d1d5db;
-  font-size: 1.1rem;
-  padding: 6px 10px;
-  font-weight: 400;
+  background: var(--card); border: 1px solid var(--line);
+  font-size: 1.05rem; padding: 6px 11px; font-weight: 400;
 }
 .accents button:hover { background: #e5e7eb; }
 
-.word-results { list-style: none; padding: 0; margin: 0; }
-.word-results li {
-  display: flex;
-  justify-content: space-between;
-  padding: 6px 0;
-  border-bottom: 1px solid #e5e7eb;
+/* ===== Screenshots importeren ===== */
+.dropzone {
+  border: 2px dashed #b9c2d0; border-radius: 14px;
+  padding: 28px 16px; text-align: center; background: white;
+  cursor: pointer; transition: border-color .15s, background .15s;
 }
-.word-results .score-good { color: var(--good); font-weight: 600; }
-.word-results .score-bad { color: var(--bad); font-weight: 600; }
+.dropzone:hover, .dropzone.over { border-color: var(--accent); background: #f0f6ff; }
+.dropzone p { margin: 4px 0; }
+.dz-icon { font-size: 2rem; margin: 0 0 4px; }
+
+.thumbs { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+.thumb { position: relative; width: 96px; height: 96px; border-radius: 10px; overflow: hidden; border: 1px solid var(--line); background: white; }
+.thumb img { width: 100%; height: 100%; object-fit: cover; }
+.thumb-del {
+  position: absolute; top: 3px; right: 3px; width: 22px; height: 22px;
+  padding: 0; border-radius: 50%; background: rgba(0,0,0,.6); color: white;
+  font-size: 15px; line-height: 1;
+}
+
+.ocr-progress { margin-top: 16px; }
+.bar { height: 8px; background: #e2e6ed; border-radius: 999px; overflow: hidden; }
+.bar-fill { height: 100%; width: 0; background: var(--accent); transition: width .25s ease; }
+
+.pairs { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+.pair-row { display: grid; grid-template-columns: 1fr 1fr 34px; gap: 6px; align-items: center; }
+.pair-row.head { font-size: .75rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 700; }
+.pair-row input {
+  font-size: .95rem; padding: 7px 9px; border: 1px solid var(--line);
+  border-radius: 8px; width: 100%; font-family: inherit;
+}
+
+.details { margin-top: 14px; background: white; border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
+.details summary { cursor: pointer; font-weight: 600; font-size: .9rem; }
+.raw { white-space: pre-wrap; font-size: .8rem; max-height: 260px; overflow: auto; color: var(--muted); }
+
+/* ===== Resultaat ===== */
+.word-results { list-style: none; padding: 0; margin: 0; }
+.word-results li { display: flex; justify-content: space-between; gap: 12px; padding: 6px 0; border-bottom: 1px solid #e5e7eb; }
+.score-good { color: var(--good); font-weight: 600; white-space: nowrap; }
+.score-bad { color: var(--bad); font-weight: 600; white-space: nowrap; }
 
 .shake { animation: shake .3s; }
 @keyframes shake {
   0%, 100% { transform: translateX(0); }
   25% { transform: translateX(-6px); }
   75% { transform: translateX(6px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+}
+
+@media (max-width: 420px) {
+  .slot { width: 38px; height: 44px; font-size: 1.4rem; }
+  .nl-word.big-nl { font-size: 1.35rem; }
+  .typed, .capture { font-size: 1.5rem; }
 }

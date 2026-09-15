@@ -4,22 +4,28 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Woordenschat Trainer — Frans</title>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🇫🇷</text></svg>">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🫧</text></svg>">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <main class="app">
 
-    <!-- Startscherm -->
+    <!-- ===== Startscherm ===== -->
     <section id="screen-start" class="screen">
-      <h1>🇫🇷 Woordenschat Trainer</h1>
-      <p class="subtitle">Eerst leren kennen, dan drillen: Nederlands zien → Frans typen.</p>
+      <h1>🫧 Woordenschat Trainer</h1>
+      <p class="subtitle">Eerst de letters uit de bubbels typen, daarna uit het hoofd drillen.</p>
 
       <div class="card">
+        <label for="list-select">Woordenlijst</label>
+        <div class="row tight">
+          <select id="list-select"></select>
+          <button id="btn-delete-list" class="ghost small" title="Deze lijst verwijderen">🗑</button>
+        </div>
+
         <label for="batch-size">Woorden per ronde</label>
         <select id="batch-size">
           <option value="5">5</option>
-          <option value="7" selected>7</option>
+          <option value="7">7</option>
           <option value="10">10</option>
           <option value="15">15</option>
         </select>
@@ -30,25 +36,80 @@
         </label>
 
         <button id="btn-start" class="primary big">Start ronde</button>
-        <button id="btn-edit-words" class="ghost">Woordenlijst aanpassen</button>
+      </div>
+
+      <div class="row">
+        <button id="btn-import" class="ghost">📷 Screenshots importeren</button>
+        <button id="btn-edit-words" class="ghost">✏️ Lijst aanpassen</button>
       </div>
 
       <p id="progress-summary" class="muted"></p>
     </section>
 
-    <!-- Woordenlijst bewerken -->
+    <!-- ===== Woordenlijst bewerken ===== -->
     <section id="screen-words" class="screen hidden">
-      <h2>Woordenlijst</h2>
+      <h2>Woordenlijst bewerken</h2>
+      <label for="list-name-input">Naam</label>
+      <input id="list-name-input" type="text" class="text-input" placeholder="Naam van de lijst">
       <p class="muted">Eén woord per regel: <code>frans = nederlands</code></p>
       <textarea id="words-input" spellcheck="false"></textarea>
       <div class="row">
         <button id="btn-save-words" class="primary">Opslaan</button>
-        <button id="btn-reset-words" class="ghost">Standaardlijst herstellen</button>
+        <button id="btn-save-as-new" class="ghost">Opslaan als nieuwe lijst</button>
         <button id="btn-cancel-words" class="ghost">Terug</button>
       </div>
     </section>
 
-    <!-- Leermodus -->
+    <!-- ===== Screenshots importeren ===== -->
+    <section id="screen-import" class="screen hidden">
+      <h2>📷 Screenshots importeren</h2>
+      <p class="muted">Sleep screenshots hierin, plak met Ctrl/⌘+V, of kies bestanden. Elk beeldformaat mag.</p>
+
+      <div id="dropzone" class="dropzone" tabindex="0">
+        <p class="dz-icon">🖼️</p>
+        <p><strong>Klik, sleep of plak</strong> je screenshots hier</p>
+        <input id="file-input" type="file" accept="image/*" multiple class="hidden-file">
+      </div>
+
+      <div id="thumbs" class="thumbs"></div>
+
+      <div class="row">
+        <button id="btn-run-ocr" class="primary" disabled>Woorden herkennen</button>
+        <button id="btn-cancel-import" class="ghost">Terug</button>
+      </div>
+
+      <div id="ocr-progress" class="ocr-progress hidden">
+        <div class="bar"><div id="ocr-bar" class="bar-fill"></div></div>
+        <p id="ocr-status" class="muted"></p>
+      </div>
+
+      <div id="import-result" class="hidden">
+        <h3 id="import-count"></h3>
+        <div class="row tight">
+          <button id="btn-swap-cols" class="ghost small">⇄ Kolommen wisselen</button>
+          <button id="btn-add-row" class="ghost small">+ Rij toevoegen</button>
+        </div>
+        <div class="pairs" id="pairs-table"></div>
+
+        <details id="unparsed-details" class="details hidden">
+          <summary>Niet herkende regels (<span id="unparsed-count">0</span>) — hier staat niets tussen dat vergeten mag worden</summary>
+          <pre id="unparsed-text" class="raw"></pre>
+        </details>
+
+        <details class="details">
+          <summary>Ruwe OCR-tekst</summary>
+          <pre id="raw-text" class="raw"></pre>
+        </details>
+
+        <label for="import-name">Naam van deze lijst</label>
+        <input id="import-name" type="text" class="text-input" placeholder="bv. Unité 3 — school">
+        <div class="row">
+          <button id="btn-save-import" class="primary big">Lijst opslaan</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Leermodus (bubbels) ===== -->
     <section id="screen-learn" class="screen hidden">
       <div class="topbar">
         <span class="mode-tag learn-tag">Leren</span>
@@ -56,15 +117,16 @@
       </div>
       <div class="card center">
         <p class="nl-word" id="learn-nl"></p>
-        <p class="fr-word" id="learn-fr"></p>
-        <div class="typed" id="learn-typed" aria-live="polite"></div>
-        <input id="learn-input" class="hidden-input" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
-        <p class="hint">Typ het Franse woord over en druk op Enter</p>
+        <div class="type-area">
+          <div class="bubbles" id="learn-bubbles"></div>
+          <input id="learn-input" class="capture" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
+        </div>
+        <p class="hint" id="learn-hint">Typ de letters — weet je het niet? Druk op Enter voor één letter.</p>
       </div>
       <div class="accents" data-target="learn-input"></div>
     </section>
 
-    <!-- Drilmodus -->
+    <!-- ===== Drilmodus ===== -->
     <section id="screen-drill" class="screen hidden">
       <div class="topbar">
         <span class="mode-tag drill-tag">Drillen</span>
@@ -72,15 +134,25 @@
       </div>
       <div class="card center">
         <p class="nl-word big-nl" id="drill-nl"></p>
-        <p class="fr-word feedback hidden" id="drill-feedback"></p>
-        <div class="typed" id="drill-typed" aria-live="polite"></div>
-        <input id="drill-input" class="hidden-input" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
-        <p class="hint" id="drill-hint">Typ de Franse vertaling en druk op Enter</p>
+        <span id="drill-stage" class="stage-tag hidden"></span>
+
+        <div class="type-area" id="drill-type-area">
+          <div class="typed" id="drill-typed" aria-live="polite"></div>
+          <input id="drill-input" class="capture" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
+        </div>
+        <p class="reveal hidden" id="drill-reveal"></p>
+
+        <div class="review hidden" id="drill-review">
+          <div class="review-row"><span class="review-label">juist</span><span class="review-word" id="review-target"></span></div>
+          <div class="review-row"><span class="review-label">jij</span><span class="review-word" id="review-attempt"></span></div>
+        </div>
+
+        <p class="hint" id="drill-hint"></p>
       </div>
       <div class="accents" data-target="drill-input"></div>
     </section>
 
-    <!-- Resultaat -->
+    <!-- ===== Resultaat ===== -->
     <section id="screen-done" class="screen hidden">
       <h2>Ronde klaar! 🎉</h2>
       <div class="card">
@@ -94,6 +166,8 @@
   </main>
 
   <script src="words.js"></script>
+  <script src="storage.js"></script>
+  <script src="ocr.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
