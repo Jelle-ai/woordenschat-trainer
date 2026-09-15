@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Woordenschat Trainer — Frans</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🇫🇷</text></svg>">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="app">
+
+    <!-- Startscherm -->
+    <section id="screen-start" class="screen">
+      <h1>🇫🇷 Woordenschat Trainer</h1>
+      <p class="subtitle">Eerst leren kennen, dan drillen: Nederlands zien → Frans typen.</p>
+
+      <div class="card">
+        <label for="batch-size">Woorden per ronde</label>
+        <select id="batch-size">
+          <option value="5">5</option>
+          <option value="7" selected>7</option>
+          <option value="10">10</option>
+          <option value="15">15</option>
+        </select>
+
+        <label class="checkbox">
+          <input type="checkbox" id="strict-accents">
+          Streng op accenten (é ≠ e)
+        </label>
+
+        <button id="btn-start" class="primary big">Start ronde</button>
+        <button id="btn-edit-words" class="ghost">Woordenlijst aanpassen</button>
+      </div>
+
+      <p id="progress-summary" class="muted"></p>
+    </section>
+
+    <!-- Woordenlijst bewerken -->
+    <section id="screen-words" class="screen hidden">
+      <h2>Woordenlijst</h2>
+      <p class="muted">Eén woord per regel: <code>frans = nederlands</code></p>
+      <textarea id="words-input" spellcheck="false"></textarea>
+      <div class="row">
+        <button id="btn-save-words" class="primary">Opslaan</button>
+        <button id="btn-reset-words" class="ghost">Standaardlijst herstellen</button>
+        <button id="btn-cancel-words" class="ghost">Terug</button>
+      </div>
+    </section>
+
+    <!-- Leermodus -->
+    <section id="screen-learn" class="screen hidden">
+      <div class="topbar">
+        <span class="mode-tag learn-tag">Leren</span>
+        <span id="learn-progress" class="muted"></span>
+      </div>
+      <div class="card center">
+        <p class="nl-word" id="learn-nl"></p>
+        <p class="fr-word" id="learn-fr"></p>
+        <div class="typed" id="learn-typed" aria-live="polite"></div>
+        <input id="learn-input" class="hidden-input" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
+        <p class="hint">Typ het Franse woord over en druk op Enter</p>
+      </div>
+      <div class="accents" data-target="learn-input"></div>
+    </section>
+
+    <!-- Drilmodus -->
+    <section id="screen-drill" class="screen hidden">
+      <div class="topbar">
+        <span class="mode-tag drill-tag">Drillen</span>
+        <span id="drill-progress" class="muted"></span>
+      </div>
+      <div class="card center">
+        <p class="nl-word big-nl" id="drill-nl"></p>
+        <p class="fr-word feedback hidden" id="drill-feedback"></p>
+        <div class="typed" id="drill-typed" aria-live="polite"></div>
+        <input id="drill-input" class="hidden-input" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
+        <p class="hint" id="drill-hint">Typ de Franse vertaling en druk op Enter</p>
+      </div>
+      <div class="accents" data-target="drill-input"></div>
+    </section>
+
+    <!-- Resultaat -->
+    <section id="screen-done" class="screen hidden">
+      <h2>Ronde klaar! 🎉</h2>
+      <div class="card">
+        <p id="done-stats"></p>
+        <ul id="done-words" class="word-results"></ul>
+        <button id="btn-again" class="primary big">Nieuwe ronde</button>
+        <button id="btn-home" class="ghost">Naar start</button>
+      </div>
+    </section>
+
+  </main>
+
+  <script src="words.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
