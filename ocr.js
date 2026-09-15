@@ -170,8 +170,12 @@ const OCR = (() => {
   // helft van alle gaten juist kolomgaten, waardoor een gemiddelde de drempel
   // onbruikbaar hoog legt. Een spatie is altijd een fractie van de regelhoogte;
   // een kolomscheiding is minstens zo breed als een regel hoog is.
+  function columnThreshold(pageWidth, wordHeight) {
+    return Math.max(wordHeight * 1.2, pageWidth * 0.025, 10);
+  }
+
   function detectColumnSplit(lines, pageWidth, wordHeight) {
-    const threshold = Math.max(wordHeight * 1.2, pageWidth * 0.025, 10);
+    const threshold = columnThreshold(pageWidth, wordHeight);
 
     const mids = [];
     let multiWordLines = 0;
@@ -199,6 +203,23 @@ const OCR = (() => {
     const agreeing = mids.filter((m) => Math.abs(m - centre) <= tolerance);
     if (agreeing.length < mids.length * 0.7) return null;
     return median(agreeing);
+  }
+
+  // Splitst een regel op de kolomgrens, maar alleen als er op die plek ook
+  // echt een gat zit. Een zin die over beide kolommen doorloopt heeft dat niet
+  // en wordt dus niet in tweeën geknipt.
+  function splitAtColumn(line, colX, threshold) {
+    const words = line.words;
+    let best = null;
+    for (let i = 0; i < words.length - 1; i++) {
+      const gap = words[i + 1].x0 - words[i].x1;
+      if (gap < threshold) continue;
+      if (words[i].x1 > colX || words[i + 1].x0 < colX) continue; // gat ligt niet op de grens
+      const distance = Math.abs((words[i].x1 + words[i + 1].x0) / 2 - colX);
+      if (!best || distance < best.distance) best = { i, distance };
+    }
+    if (!best) return null;
+    return [joinWords(words.slice(0, best.i + 1)), joinWords(words.slice(best.i + 1))];
   }
 
   function joinWords(words) {
@@ -239,6 +260,20 @@ const OCR = (() => {
     return tokens.length > 0 && tokens.every((t) => HEADER_WORDS.has(t));
   }
 
+  // Woordenlijsten bevatten vaak ook losse zinnen: een voorbeeldzin bij een
+  // woord, of een opmerking van de leerkracht tussen de rijen door. Die horen
+  // niet in de oefening thuis.
+  function looksLikeSentence(s) {
+    const t = String(s).trim();
+    if (!t) return false;
+    const words = t.split(/\s+/).filter(Boolean).length;
+    if (t.length > 45) return true;
+    if (words >= 6) return true;
+    if (words >= 4 && /[.!?]$/.test(t)) return true;
+    if (words >= 4 && t.includes(",")) return true;
+    return false;
+  }
+
   function cleanLine(line) {
     return line
       .replace(/\u2019/g, "'")
@@ -259,27 +294,35 @@ const OCR = (() => {
     return null;
   }
 
-  function acceptPair(pair, pairs, unparsed, rawLine) {
+  function acceptPair(pair, out, rawLine) {
     if (!pair) {
-      if (rawLine) unparsed.push(rawLine);
+      if (rawLine) out.unparsed.push(rawLine);
       return;
     }
     const [a, b] = [cleanLine(pair[0]), cleanLine(pair[1])];
-    if (!a || !b || a.length > 60 || b.length > 60) {
-      if (rawLine) unparsed.push(rawLine);
+    if (!a || !b) {
+      if (rawLine) out.unparsed.push(rawLine);
       return;
     }
     if (isHeaderSide(a) || isHeaderSide(b)) return; // koptekst, geen woordpaar
     if (HEADER_RE.test(a) && !b) return;
-    pairs.push([a, b]);
+    // Voorbeeldzinnen en opmerkingen apart houden: ze verdwijnen niet, maar
+    // komen ook niet zomaar in de oefening terecht.
+    if (looksLikeSentence(a) || looksLikeSentence(b)) {
+      out.sentences.push([a, b]);
+      return;
+    }
+    out.pairs.push([a, b]);
   }
 
   // Parsen op basis van woordposities (twee kolommen).
-  function parsePage(page, pairs, unparsed) {
+  function parsePage(page, out) {
     const lines = groupIntoLines(page.words);
     if (!lines.length) return false;
+    const pageWidth = page.width || 1000;
     const wordHeight = median(page.words.map((w) => w.y1 - w.y0)) || 12;
-    const colX = detectColumnSplit(lines, page.width || 1000, wordHeight);
+    const colX = detectColumnSplit(lines, pageWidth, wordHeight);
+    const threshold = columnThreshold(pageWidth, wordHeight);
 
     for (const line of lines) {
       const text = cleanLine(joinWords(line.words));
@@ -288,20 +331,25 @@ const OCR = (() => {
 
       // Staat er een expliciet scheidingsteken, dan wint dat van de kolompositie.
       if (EXPLICIT_SEP.test(text)) {
-        acceptPair(splitLine(text), pairs, unparsed, text);
+        acceptPair(splitLine(text), out, text);
         continue;
       }
 
       if (colX != null) {
-        const left = line.words.filter((w) => (w.x0 + w.x1) / 2 < colX);
-        const right = line.words.filter((w) => (w.x0 + w.x1) / 2 >= colX);
-        if (left.length && right.length) {
-          acceptPair([joinWords(left), joinWords(right)], pairs, unparsed, text);
+        const parts = splitAtColumn(line, colX, threshold);
+        if (parts) {
+          acceptPair(parts, out, text);
+          continue;
+        }
+        // Geen gat op de kolomgrens: dit is een regel over de volle breedte,
+        // dus een zin of een opmerking, geen woordpaar.
+        if (looksLikeSentence(text)) {
+          out.sentences.push([text, ""]);
           continue;
         }
       }
 
-      acceptPair(splitLine(text), pairs, unparsed, text);
+      acceptPair(splitLine(text), out, text);
     }
     return true;
   }
@@ -337,28 +385,28 @@ const OCR = (() => {
 
   // Alleen platte tekst (geen posities beschikbaar).
   function parsePairs(text) {
-    const pairs = [];
-    const unparsed = [];
+    const out = { pairs: [], unparsed: [], sentences: [] };
     for (const rawLine of String(text).split(/\r?\n/)) {
       const line = cleanLine(rawLine);
       if (!line || line.length < 3) continue;
       if (HEADER_RE.test(line)) continue;
-      acceptPair(splitLine(line), pairs, unparsed, line);
+      acceptPair(splitLine(line), out, line);
     }
-    return { pairs: orientPairs(pairs), unparsed };
+    out.pairs = orientPairs(out.pairs);
+    return out;
   }
 
   // Volledig OCR-resultaat (met posities) omzetten naar woordparen.
   function parseDocument(result) {
-    const pairs = [];
-    const unparsed = [];
+    const out = { pairs: [], unparsed: [], sentences: [] };
     let any = false;
     for (const page of result.pages || []) {
-      if (parsePage(page, pairs, unparsed)) any = true;
+      if (parsePage(page, out)) any = true;
     }
     if (!any) return parsePairs(result.text || "");
-    return { pairs: orientPairs(pairs), unparsed };
+    out.pairs = orientPairs(out.pairs);
+    return out;
   }
 
-  return { recognizeFiles, parseDocument, parsePairs, groupIntoLines, detectColumnSplit, frenchScore, dutchScore };
+  return { recognizeFiles, parseDocument, parsePairs, groupIntoLines, detectColumnSplit, looksLikeSentence, frenchScore, dutchScore };
 })();

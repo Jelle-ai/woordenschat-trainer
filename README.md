@@ -1,8 +1,16 @@
-# Woordenschat Trainer 🫧
+# Woordenschat Trainer
 
 Een webapp om Franse woordenschat te leren door te typen. Geen build, geen
 server, geen account: open `index.html` en je kunt oefenen. Alles blijft lokaal
 in je browser.
+
+## Drie manieren om te oefenen
+
+- **Start ronde** — een greep uit de lijst (5 tot 15 woorden), eerst leren en
+  daarna oefenen. De minst gekende woorden komen als eerste aan bod.
+- **Lijst leren** — de hele lijst in één keer door de bubbelmodus, zonder
+  overhoring achteraf. Bedoeld om nieuwe woorden een eerste keer door te nemen.
+- **Lijst oefenen** — de hele lijst meteen uit het hoofd, zonder leerfase.
 
 ## Hoe een ronde werkt
 
@@ -43,6 +51,7 @@ De herkenning gebeurt volledig in je browser (Tesseract draait lokaal mee in
 `vendor/`, er gaat niets naar een server) en werkt met:
 
 - twee kolommen naast elkaar, in beide volgordes (Frans links of rechts)
+- voorbeeldzinnen en opmerkingen tussen de rijen, die apart worden gezet
 - `frans = nederlands`, met `:`, `-`, `|` of een tab als scheidingsteken
 - genummerde lijsten en opsommingstekens
 - screenshots in donkere modus (die worden automatisch omgekeerd)
@@ -51,6 +60,13 @@ De herkenning gebeurt volledig in je browser (Tesseract draait lokaal mee in
 Kolommen worden herkend aan de posities van de woorden op het beeld, niet aan
 de tekstvolgorde — dat is nodig omdat OCR een tabel vaak kolom-voor-kolom
 uitleest in plaats van rij-voor-rij.
+
+Zinnen worden er op twee manieren uitgehouden. Een regel wordt alleen in tweeën
+geknipt als er op de kolomgrens ook echt een gat zit; een zin die over de volle
+breedte doorloopt heeft dat niet en wordt dus niet als woordpaar gelezen. En wat
+er qua vorm uitziet als een zin — te lang, te veel woorden, of eindigend op een
+punt — komt in een apart blokje "Overgeslagen zinnen" te staan. Daar kun je ze
+alsnog toevoegen als de app zich vergist.
 
 Daarna krijg je alles ter controle te zien: een tabel die je kunt bijwerken,
 een knop om de kolommen te wisselen, en twee uitklapbare blokken met de ruwe
@@ -65,8 +81,18 @@ bewaard.
   bewaard
 - Accentknoppen (é è ê ç œ …) en een keuze tussen streng of soepel op accenten
   — standaard soepel, dus `le velo` telt voor `le vélo`
-- Eigen lijsten ook met de hand te typen of te plakken (`frans = nederlands`)
+- Eigen lijsten zelf typen via **Zelf een lijst typen**: één paar per regel met
+  een `=` ertussen (`le chien = de hond`). Terwijl je typt zie je hoeveel paren
+  er herkend worden en welke regels nog geen `=` hebben. Een tab of puntkomma
+  wordt ook aangenomen, zodat geplakte tekst uit een spreadsheet meteen werkt.
 - Meerdere lijsten naast elkaar, met een startlijst van 60 veelgebruikte woorden
+
+## Vormgeving
+
+De app volgt de vormgeving van iOS: zwevende panelen met matglas, gegroepeerde
+rijen zoals in de instellingen, de systeemkleuren van Apple en een donker thema
+dat automatisch meegaat met je toestel. Iconen zijn getekende SVG's, geen
+emoji's.
 
 ## Op de telefoon
 

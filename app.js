@@ -135,18 +135,35 @@ function pickBatch(size) {
   return shuffle(scored.slice(0, size).map((x) => x.w));
 }
 
-function startSession() {
+// mode: "ronde" = een greep woorden, leren en dan oefenen
+//       "leren"  = de hele lijst, alleen de bubbels
+//       "oefenen"= de hele lijst, meteen uit het hoofd
+function startSession(mode) {
+  const kind = mode || "ronde";
   if (!activeList.words.length) {
     alert("Deze lijst is leeg. Voeg eerst woorden toe.");
     return;
   }
+
+  const batch =
+    kind === "ronde"
+      ? pickBatch(Math.min(settings.batchSize, activeList.words.length))
+      : shuffle(activeList.words);
+
   session = {
-    batch: pickBatch(Math.min(settings.batchSize, activeList.words.length)),
+    mode: kind,
+    batch,
     learnIndex: 0,
     results: {},
   };
   session.batch.forEach(([fr]) => (session.results[fr] = { errors: 0, hints: 0, helped: false }));
-  startLearn();
+
+  if (kind === "oefenen") startDrill();
+  else startLearn();
+}
+
+function lastMode() {
+  return (session && session.mode) || "ronde";
 }
 
 function bumpStat(fr, key) {
@@ -182,8 +199,19 @@ function showLearnWord() {
   input.focus();
 }
 
+// Past de bubbelgrootte aan de woordlengte aan, zodat een lang woord op één
+// rij blijft in plaats van af te breken.
+const BUBBLE_GAP = 7;
+function sizeBubbles(container, count) {
+  const available = container.clientWidth || 340;
+  const fitting = Math.floor((available - (count - 1) * BUBBLE_GAP) / Math.max(count, 1));
+  const size = Math.max(26, Math.min(46, fitting));
+  container.style.setProperty("--slot", size + "px");
+}
+
 function buildBubbles(container, chars) {
   container.innerHTML = "";
+  sizeBubbles(container, chars.length);
   const slots = [];
   chars.forEach((ch, idx) => {
     const slot = document.createElement("span");
@@ -230,11 +258,12 @@ function finishLearnWord() {
   learn.done = true;
   learn.slots.forEach((s) => s.classList.remove("current"));
   $("learn-bubbles").classList.add("complete");
-  $("learn-hint").textContent = "✓ juist!";
+  $("learn-hint").textContent = "Juist";
   setTimeout(() => {
     $("learn-bubbles").classList.remove("complete");
     session.learnIndex++;
     if (session.learnIndex < session.batch.length) showLearnWord();
+    else if (session.mode === "leren") finishSession();
     else startDrill();
   }, 650);
 }
@@ -320,19 +349,19 @@ function setDrillState(state, attempt) {
     renderTyped(typedEl, "", null);
     $("drill-hint").textContent = "Typ de Franse vertaling · weet je het niet? 2× Enter";
   } else if (state === COPY) {
-    stageEl.className = "stage-tag copy";
+    stageEl.className = "stage-tag is-copy";
     stageEl.textContent = "overtypen";
     revealEl.textContent = fr;
     revealEl.classList.remove("hidden");
     renderTyped(typedEl, "", fr);
     $("drill-hint").textContent = "Typ het woord hieronder over";
   } else if (state === RECALL) {
-    stageEl.className = "stage-tag recall";
+    stageEl.className = "stage-tag is-recall";
     stageEl.textContent = "uit het hoofd";
     renderTyped(typedEl, "", null);
     $("drill-hint").textContent = "En nu nog eens, zonder te kijken";
   } else if (state === REVIEW) {
-    stageEl.className = "stage-tag review";
+    stageEl.className = "stage-tag is-review";
     stageEl.textContent = "nakijken";
     $("drill-type-area").classList.add("hidden");
     reviewEl.classList.remove("hidden");
@@ -437,7 +466,10 @@ function giveUp(item) {
 function flashCorrect(fr) {
   const typedEl = $("drill-typed");
   typedEl.innerHTML = "";
-  typedEl.appendChild(span("✓ " + fr, "flash-ok"));
+  const ok = span("", "flash-ok");
+  ok.appendChild(svgIcon("i-check", 20));
+  ok.append(" " + fr);
+  typedEl.appendChild(ok);
   $("drill-hint").textContent = "";
   $("drill-stage").className = "stage-tag hidden";
   $("drill-reveal").classList.add("hidden");
@@ -451,10 +483,19 @@ function finishSession() {
   showScreen("screen-done");
   const totalErrors = Object.values(session.results).reduce((s, r) => s + r.errors, 0);
   const helped = Object.values(session.results).filter((r) => r.helped).length;
-  $("done-stats").textContent =
-    totalErrors === 0 && helped === 0
-      ? "Foutloos! Alle woorden in één keer uit het hoofd."
-      : `${totalErrors} fout${totalErrors === 1 ? "" : "en"}, ${helped} woord${helped === 1 ? "" : "en"} met hulp.`;
+  const hints = Object.values(session.results).reduce((s, r) => s + r.hints, 0);
+
+  if (session.mode === "leren") {
+    $("done-stats").textContent =
+      hints === 0
+        ? `${session.batch.length} woorden doorlopen zonder één letter cadeau.`
+        : `${session.batch.length} woorden doorlopen, ${hints} letter${hints === 1 ? "" : "s"} weggegeven.`;
+  } else {
+    $("done-stats").textContent =
+      totalErrors === 0 && helped === 0
+        ? "Foutloos, alles in één keer uit het hoofd."
+        : `${totalErrors} fout${totalErrors === 1 ? "" : "en"}, ${helped} woord${helped === 1 ? "" : "en"} met hulp.`;
+  }
 
   const list = $("done-words");
   list.innerHTML = "";
@@ -462,16 +503,44 @@ function finishSession() {
     const r = session.results[fr];
     const li = document.createElement("li");
     li.append(span(`${fr} — ${nl}`, ""));
-    const clean = r.errors === 0 && !r.helped;
-    li.append(span(clean ? "✓ foutloos" : `${r.errors}× fout`, clean ? "score-good" : "score-bad"));
+
+    if (session.mode === "leren") {
+      li.append(r.hints === 0 ? goodMark("zelf getypt") : span(`${r.hints} letter${r.hints === 1 ? "" : "s"} hulp`, "score-bad"));
+    } else {
+      const clean = r.errors === 0 && !r.helped;
+      li.append(clean ? goodMark("foutloos") : span(`${r.errors}× fout`, "score-bad"));
+    }
     list.appendChild(li);
   });
   updateSummary();
 }
 
+// Vinkje als icoon in plaats van een emoji.
+function goodMark(text) {
+  const el = span("", "score-good");
+  el.appendChild(svgIcon("i-check", 13));
+  el.append(text);
+  return el;
+}
+
+function svgIcon(name, size) {
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("width", size);
+  svg.setAttribute("height", size);
+  svg.setAttribute("aria-hidden", "true");
+  const use = document.createElementNS("http://www.w3.org/2000/svg", "use");
+  use.setAttribute("href", "#" + name);
+  svg.appendChild(use);
+  return svg;
+}
+
 function updateSummary() {
+  const total = activeList.words.length;
   const known = activeList.words.filter(([fr]) => (stats[fr] || {}).correct >= CORRECT_NEEDED).length;
-  $("progress-summary").textContent = `${known} van ${activeList.words.length} woorden al eens goed gedrild.`;
+  $("progress-summary").textContent = `${known} van ${total} woorden al eens goed geoefend.`;
+  const note = `${total} woord${total === 1 ? "" : "en"}`;
+  $("learn-all-note").textContent = note;
+  $("drill-all-note").textContent = note;
 }
 
 // ---------- Startscherm ----------
@@ -498,30 +567,73 @@ function goHome() {
 }
 
 // ---------- Woordenlijst bewerken ----------
+function openNewListEditor() {
+  $("list-name-input").value = "";
+  $("list-name-input").placeholder = "Naam van je nieuwe lijst";
+  $("words-input").value = "";
+  $("btn-save-words").classList.add("hidden"); // een nieuwe lijst wordt altijd nieuw opgeslagen
+  updateEditorCount();
+  showScreen("screen-words");
+  $("words-input").focus();
+}
+
 function openWordEditor() {
   $("list-name-input").value = activeList.id === Storage.DEFAULT_ID ? "" : activeList.name;
   $("list-name-input").placeholder = activeList.id === Storage.DEFAULT_ID ? "Naam voor je eigen kopie" : "Naam van de lijst";
   $("words-input").value = activeList.words.map(([fr, nl]) => `${fr} = ${nl}`).join("\n");
   $("btn-save-words").classList.toggle("hidden", activeList.id === Storage.DEFAULT_ID);
+  updateEditorCount();
   showScreen("screen-words");
 }
 
-function parseEditorText() {
-  const parsed = [];
-  for (const line of $("words-input").value.split("\n")) {
-    const idx = line.indexOf("=");
-    if (idx < 0) continue;
-    const fr = line.slice(0, idx).trim();
-    const nl = line.slice(idx + 1).trim();
-    if (fr && nl) parsed.push([fr, nl]);
+// Laat meteen zien hoeveel woordparen er herkend worden terwijl je typt.
+function updateEditorCount() {
+  const { pairs, bad } = parseEditorText();
+  const el = $("editor-count");
+  if (!pairs.length && !bad.length) {
+    el.textContent = "";
+    return;
   }
-  return parsed;
+  let text = `${pairs.length} woordpaar${pairs.length === 1 ? "" : "en"} herkend`;
+  if (bad.length) text += ` · ${bad.length} regel${bad.length === 1 ? "" : "s"} zonder "=": ${bad.slice(0, 3).map((l) => `"${l}"`).join(", ")}`;
+  el.textContent = text;
+  el.classList.toggle("warn", bad.length > 0);
+}
+
+// "frans = nederlands" is de bedoelde vorm; een tab of puntkomma nemen we ook
+// aan, zodat geplakte tekst uit een spreadsheet meteen werkt.
+function parseEditorText() {
+  const pairs = [];
+  const bad = [];
+  for (const raw of $("words-input").value.split("\n")) {
+    const line = raw.trim();
+    if (!line) continue;
+    let fr = "";
+    let nl = "";
+    const idx = line.indexOf("=");
+    if (idx >= 0) {
+      fr = line.slice(0, idx).trim();
+      nl = line.slice(idx + 1).trim();
+    } else {
+      const parts = line.split(/\t+|\s*;\s*/);
+      if (parts.length >= 2) {
+        fr = parts[0].trim();
+        nl = parts.slice(1).join(" ").trim();
+      }
+    }
+    if (fr && nl) pairs.push([fr, nl]);
+    else bad.push(line);
+  }
+  return { pairs, bad };
 }
 
 function saveWordList(asNew) {
-  const words = parseEditorText();
+  const { pairs: words, bad } = parseEditorText();
   if (!words.length) {
-    alert("Geen geldige regels gevonden. Gebruik het formaat: frans = nederlands");
+    alert("Geen geldige regels gevonden. Zet een = tussen het Franse en het Nederlandse woord, bijvoorbeeld:\n\nle chien = de hond");
+    return;
+  }
+  if (bad.length && !confirm(`${bad.length} regel(s) hebben geen "=" en worden overgeslagen:\n\n${bad.slice(0, 5).join("\n")}\n\nToch opslaan met ${words.length} woordpaar(en)?`)) {
     return;
   }
   const name = $("list-name-input").value.trim() || "Mijn lijst";
@@ -530,13 +642,14 @@ function saveWordList(asNew) {
 }
 
 // ================= SCREENSHOTS IMPORTEREN =================
-const importState = { files: [], pairs: [], raw: "", unparsed: [] };
+const importState = { files: [], pairs: [], raw: "", unparsed: [], sentences: [] };
 
 function openImport() {
   importState.files = [];
   importState.pairs = [];
   importState.raw = "";
   importState.unparsed = [];
+  importState.sentences = [];
   $("thumbs").innerHTML = "";
   $("import-result").classList.add("hidden");
   $("ocr-progress").classList.add("hidden");
@@ -591,9 +704,10 @@ async function runOcr() {
   try {
     const result = await OCR.recognizeFiles(importState.files, setProgress);
     importState.raw = result.text;
-    const { pairs, unparsed } = OCR.parseDocument(result);
+    const { pairs, unparsed, sentences } = OCR.parseDocument(result);
     importState.pairs = pairs;
     importState.unparsed = unparsed;
+    importState.sentences = sentences || [];
     renderImportResult();
     $("ocr-progress").classList.add("hidden");
   } catch (err) {
@@ -608,6 +722,18 @@ function renderImportResult() {
   $("import-result").classList.remove("hidden");
   $("import-count").textContent = `${importState.pairs.length} woordparen gevonden in ${importState.files.length} screenshot${importState.files.length === 1 ? "" : "s"}`;
   $("raw-text").textContent = importState.raw || "(geen tekst gevonden)";
+
+  const sentenceBox = $("sentence-details");
+  sentenceBox.classList.toggle("hidden", importState.sentences.length === 0);
+  $("sentence-count").textContent = String(importState.sentences.length);
+  const sentenceList = $("sentence-list");
+  sentenceList.innerHTML = "";
+  importState.sentences.forEach(([a, b]) => {
+    const row = document.createElement("div");
+    row.className = "pair-row sentence-row";
+    row.append(span(a, ""), span(b || "", "muted"));
+    sentenceList.appendChild(row);
+  });
 
   const unparsedBox = $("unparsed-details");
   unparsedBox.classList.toggle("hidden", importState.unparsed.length === 0);
@@ -640,8 +766,10 @@ function renderPairsTable() {
     nl.addEventListener("input", () => (importState.pairs[idx][1] = nl.value));
 
     const del = document.createElement("button");
-    del.className = "ghost small";
-    del.textContent = "×";
+    del.type = "button";
+    del.className = "icon-btn danger";
+    del.title = "Rij verwijderen";
+    del.appendChild(svgIcon("i-trash", 16));
     del.addEventListener("click", () => {
       importState.pairs.splice(idx, 1);
       renderPairsTable();
@@ -694,8 +822,10 @@ function buildAccentBars() {
 }
 
 // ---------- Events ----------
-$("btn-start").addEventListener("click", startSession);
-$("btn-again").addEventListener("click", startSession);
+$("btn-start").addEventListener("click", () => startSession("ronde"));
+$("btn-learn-all").addEventListener("click", () => startSession("leren"));
+$("btn-drill-all").addEventListener("click", () => startSession("oefenen"));
+$("btn-again").addEventListener("click", () => startSession(lastMode()));
 $("btn-home").addEventListener("click", goHome);
 
 $("list-select").addEventListener("change", (e) => {
@@ -723,6 +853,8 @@ $("strict-accents").addEventListener("change", (e) => {
 });
 
 $("btn-edit-words").addEventListener("click", openWordEditor);
+$("btn-new-list").addEventListener("click", openNewListEditor);
+$("words-input").addEventListener("input", updateEditorCount);
 $("btn-save-words").addEventListener("click", () => saveWordList(false));
 $("btn-save-as-new").addEventListener("click", () => saveWordList(true));
 $("btn-cancel-words").addEventListener("click", goHome);
@@ -734,6 +866,16 @@ $("btn-save-import").addEventListener("click", saveImportedList);
 $("btn-add-row").addEventListener("click", () => {
   importState.pairs.push(["", ""]);
   renderPairsTable();
+});
+$("btn-add-sentences").addEventListener("click", () => {
+  const bruikbaar = importState.sentences.filter(([a, b]) => a && b);
+  if (!bruikbaar.length) {
+    alert("Deze zinnen staan zonder vertaling in het screenshot, dus er valt geen woordpaar van te maken.");
+    return;
+  }
+  importState.pairs = importState.pairs.concat(bruikbaar);
+  importState.sentences = [];
+  renderImportResult();
 });
 $("btn-swap-cols").addEventListener("click", () => {
   importState.pairs = importState.pairs.map(([a, b]) => [b, a]);
@@ -805,7 +947,6 @@ $("screen-drill").addEventListener("click", () => $("drill-input").focus());
 
   function sync() {
     const on = isFullscreen();
-    btn.textContent = on ? "⛶" : "⛶";
     btn.title = on ? "Volledig scherm verlaten" : "Volledig scherm";
     btn.setAttribute("aria-label", btn.title);
     btn.classList.toggle("active", on);
@@ -823,6 +964,12 @@ $("screen-drill").addEventListener("click", () => $("drill-input").focus());
   document.addEventListener("webkitfullscreenchange", sync);
   sync();
 })();
+
+addEventListener("resize", () => {
+  if (learn.chars.length && !$("screen-learn").classList.contains("hidden")) {
+    sizeBubbles($("learn-bubbles"), learn.chars.length);
+  }
+});
 
 buildAccentBars();
 goHome();

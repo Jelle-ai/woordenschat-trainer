@@ -1,195 +1,379 @@
+/* ============================================================
+   Woordenschat Trainer — vormgeving in de stijl van iOS:
+   zwevende panelen met matglas, gegroepeerde rijen, systeemkleuren.
+   ============================================================ */
+
 * { box-sizing: border-box; }
 
 :root {
-  --bg: #eef1f6;
-  --card: #ffffff;
-  --text: #1c2333;
-  --muted: #6b7280;
-  --accent: #2563eb;
-  --accent-dark: #1e40af;
-  --good: #16a34a;
-  --bad: #dc2626;
-  --hint: #d97706;
-  --learn: #7c3aed;
-  --drill: #ea580c;
-  --line: #d9dee7;
+  /* Systeemkleuren van iOS */
+  --blue: #007AFF;
+  --green: #34C759;
+  --red: #FF3B30;
+  --orange: #FF9500;
+  --purple: #AF52DE;
+  --teal: #5AC8FA;
+  --pink: #FF2D92;
+
+  --label: #000000;
+  --label-2: rgba(60, 60, 67, .60);
+  --label-3: rgba(60, 60, 67, .30);
+  --separator: rgba(60, 60, 67, .16);
+
+  --surface: rgba(255, 255, 255, .72);
+  --surface-solid: #ffffff;
+  --fill: rgba(118, 118, 128, .12);
+  --fill-strong: rgba(118, 118, 128, .20);
+
+  --shadow-s: 0 1px 2px rgba(0, 0, 0, .05), 0 4px 14px rgba(0, 0, 0, .05);
+  --shadow-m: 0 2px 6px rgba(0, 0, 0, .06), 0 14px 40px rgba(0, 0, 0, .09);
+
+  --radius-l: 22px;
+  --radius-m: 16px;
+  --radius-s: 11px;
+
+  --learn: var(--purple);
+  --drill: var(--orange);
+
+  --ease: cubic-bezier(.32, .72, 0, 1);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --label: #ffffff;
+    --label-2: rgba(235, 235, 245, .60);
+    --label-3: rgba(235, 235, 245, .30);
+    --separator: rgba(84, 84, 88, .55);
+
+    --surface: rgba(28, 28, 30, .72);
+    --surface-solid: #1c1c1e;
+    --fill: rgba(118, 118, 128, .24);
+    --fill-strong: rgba(118, 118, 128, .36);
+
+    --shadow-s: 0 1px 2px rgba(0, 0, 0, .4), 0 4px 14px rgba(0, 0, 0, .35);
+    --shadow-m: 0 2px 8px rgba(0, 0, 0, .5), 0 16px 44px rgba(0, 0, 0, .5);
+  }
 }
 
 html { height: 100%; }
 
 body {
   margin: 0;
-  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
-  background: var(--bg);
-  color: var(--text);
   min-height: 100%;
-  /* Vult het scherm ook als de adresbalk van de telefoon in- of uitschuift. */
   min-height: 100dvh;
+  color: var(--label);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
+  font-size: 17px;
+  line-height: 1.45;
+  letter-spacing: -0.01em;
   -webkit-text-size-adjust: 100%;
+  -webkit-font-smoothing: antialiased;
+  background: #f2f2f7;
 }
 
-/* Volledig scherm vullen: kopbalk bovenaan, oefening in het midden,
-   accentknoppen onderaan — ook wanneer het toetsenbord openschuift. */
+/* Zachte kleurvelden op de achtergrond, zodat de panelen erboven zweven. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: -10%;
+  z-index: -1;
+  background:
+    radial-gradient(55% 45% at 12% 8%,  rgba(90, 200, 250, .34), transparent 62%),
+    radial-gradient(48% 42% at 88% 16%, rgba(175, 82, 222, .26), transparent 62%),
+    radial-gradient(55% 45% at 50% 98%, rgba(255, 149, 0, .18),  transparent 62%);
+  pointer-events: none;
+}
+@media (prefers-color-scheme: dark) {
+  body { background: #000; }
+  body::before {
+    background:
+      radial-gradient(55% 45% at 12% 8%,  rgba(10, 132, 255, .28), transparent 62%),
+      radial-gradient(48% 42% at 88% 16%, rgba(191, 90, 242, .22), transparent 62%),
+      radial-gradient(55% 45% at 50% 98%, rgba(255, 159, 10, .14), transparent 62%);
+  }
+}
+
+.sprite { position: absolute; width: 0; height: 0; overflow: hidden; }
+.hidden { display: none !important; }
+
+/* ===== Schermvullende opbouw ===== */
 .app {
-  max-width: 620px;
+  max-width: 600px;
   margin: 0 auto;
   width: 100%;
   min-height: 100dvh;
   display: flex;
   flex-direction: column;
   padding:
-    calc(18px + env(safe-area-inset-top)) calc(16px + env(safe-area-inset-right))
-    calc(18px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left));
+    calc(20px + env(safe-area-inset-top)) calc(18px + env(safe-area-inset-right))
+    calc(20px + env(safe-area-inset-bottom)) calc(18px + env(safe-area-inset-left));
 }
 
 .screen { flex: 1; display: flex; flex-direction: column; min-height: 0; }
-.screen#screen-start, .screen#screen-words, .screen#screen-import, .screen#screen-done { overflow-y: auto; }
+#screen-start, #screen-words, #screen-import, #screen-done { overflow-y: auto; gap: 0; }
 
-/* De oefenschermen: de kaart sluit om zijn inhoud en zweeft in het midden
-   tussen de kopbalk en de accentknoppen; die laatste blijven onderaan staan.
-   De twee automatische marges verdelen de vrije ruimte gelijk. */
-#screen-learn .card, #screen-drill .card {
-  flex: 0 0 auto;
-  margin-top: auto;
-  margin-bottom: auto;
+/* De oefenschermen: de kaart zweeft in het midden, de accenten blijven onderaan. */
+#screen-learn .card, #screen-drill .card { flex: 0 0 auto; margin-top: auto; margin-bottom: auto; }
+#screen-learn .accents, #screen-drill .accents { padding-top: 16px; }
+
+/* ===== Typografie ===== */
+.page-head { margin: 4px 0 18px; padding-right: 46px; }
+h1 {
+  font-size: 34px; line-height: 1.12; font-weight: 700;
+  letter-spacing: -0.028em; margin: 0;
 }
-#screen-learn .accents, #screen-drill .accents { padding-top: 14px; }
-
-/* Knop voor volledig scherm */
-.fs-btn {
-  position: fixed;
-  top: calc(10px + env(safe-area-inset-top));
-  right: calc(10px + env(safe-area-inset-right));
-  z-index: 50;
-  width: 38px; height: 38px; padding: 0;
-  font-size: 1rem; line-height: 1;
-  background: rgba(255,255,255,.85);
-  color: var(--muted);
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  backdrop-filter: blur(4px);
+h2 {
+  font-size: 28px; line-height: 1.15; font-weight: 700;
+  letter-spacing: -0.024em; margin: 0;
 }
-.fs-btn:hover { color: var(--text); background: #fff; }
-
-h1 { font-size: 1.7rem; margin: 8px 0 4px; padding-right: 46px; }
-h2 { font-size: 1.35rem; }
-h3 { font-size: 1.05rem; margin: 18px 0 8px; }
-.subtitle { color: var(--muted); margin-top: 0; }
-.muted { color: var(--muted); }
-.hidden { display: none !important; }
-
-.card {
-  background: var(--card);
-  border-radius: 16px;
-  padding: 24px;
-  box-shadow: 0 1px 4px rgba(20,30,60,.08);
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-.card.center { align-items: center; text-align: center; min-height: 290px; justify-content: center; }
-
-label { font-weight: 600; }
-.checkbox { font-weight: 400; display: flex; gap: 8px; align-items: center; }
-
-select, .text-input {
-  font-size: 1rem;
-  padding: 9px 10px;
-  border-radius: 9px;
-  border: 1px solid var(--line);
-  background: white;
-  color: inherit;
-  font-family: inherit;
-  width: 100%;
+h3 { font-size: 17px; font-weight: 600; margin: 22px 0 10px; letter-spacing: -0.01em; }
+.subtitle { color: var(--label-2); margin: 6px 0 0; font-size: 15px; line-height: 1.4; }
+.footnote { color: var(--label-2); font-size: 13px; margin: 8px 0 0; line-height: 1.4; }
+code {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: .92em; background: var(--fill); padding: 1px 5px; border-radius: 5px;
 }
 
-button {
-  font-size: 1rem;
-  padding: 10px 18px;
-  border-radius: 10px;
-  border: none;
+.group-title {
+  font-size: 13px; text-transform: uppercase; letter-spacing: .04em;
+  color: var(--label-2); font-weight: 600;
+  margin: 26px 0 8px; padding-left: 16px;
+}
+
+/* ===== Gegroepeerde rijen (zoals de instellingen op iOS) ===== */
+.group {
+  background: var(--surface);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  backdrop-filter: blur(24px) saturate(180%);
+  border-radius: var(--radius-m);
+  box-shadow: var(--shadow-s);
+  overflow: hidden;
+}
+
+.group-row {
+  display: flex; align-items: center; gap: 12px;
+  width: 100%; min-height: 50px;
+  padding: 11px 16px;
+  background: none; border: 0; margin: 0;
+  font: inherit; color: inherit; text-align: left;
+  position: relative;
+}
+.group-row + .group-row::before {
+  content: ""; position: absolute; left: 16px; right: 0; top: 0;
+  height: 1px; background: var(--separator);
+}
+.group-row.action { cursor: pointer; touch-action: manipulation; }
+.group-row.action:active { background: var(--fill); }
+@media (hover: hover) { .group-row.action:hover { background: var(--fill); } }
+
+.row-label { flex: 1; font-size: 17px; letter-spacing: -0.01em; }
+.row-note { color: var(--label-2); font-size: 15px; }
+.row-value { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+.chev { color: var(--label-3); flex-shrink: 0; }
+
+.row-icon {
+  width: 29px; height: 29px; border-radius: 8px;
+  display: inline-flex; align-items: center; justify-content: center;
+  color: #fff; flex-shrink: 0;
+}
+.row-icon.blue { background: var(--blue); }
+.row-icon.green { background: var(--green); }
+.row-icon.gray { background: #8E8E93; }
+.row-icon.learn { background: var(--learn); }
+.row-icon.drill { background: var(--drill); }
+
+/* ===== Formulierelementen ===== */
+select {
+  font: inherit; font-size: 17px;
+  color: var(--label-2);
+  background: transparent; border: 0;
+  padding: 4px 2px; margin: 0;
+  max-width: 62vw; text-align: right;
+  text-align-last: right;
+  -webkit-appearance: none; appearance: none;
   cursor: pointer;
-  font-weight: 600;
-  font-family: inherit;
-  touch-action: manipulation;
 }
-button.primary { background: var(--accent); color: white; }
-button.primary:hover { background: var(--accent-dark); }
-button.primary:disabled { background: #9ca3af; cursor: not-allowed; }
-button.big { padding: 14px 18px; font-size: 1.1rem; }
-button.ghost { background: transparent; color: var(--accent); }
-button.ghost:hover { text-decoration: underline; }
-button.small { padding: 6px 10px; font-size: .9rem; }
+select:focus-visible { outline: 2px solid var(--blue); border-radius: 6px; }
 
-.row { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; align-items: center; }
-.row.tight { margin-top: 0; }
-.row.tight select { flex: 1; }
+.text-input, textarea {
+  width: 100%; font: inherit;
+  background: var(--fill); color: var(--label);
+  border: 1px solid transparent; border-radius: var(--radius-s);
+  padding: 11px 13px;
+}
+.text-input::placeholder, textarea::placeholder { color: var(--label-3); }
+.text-input:focus, textarea:focus { outline: none; border-color: var(--blue); background: var(--surface-solid); }
 
 textarea {
-  width: 100%;
-  min-height: 300px;
-  font-family: ui-monospace, monospace;
-  font-size: .95rem;
-  padding: 12px;
-  border-radius: 10px;
-  border: 1px solid var(--line);
-  resize: vertical;
+  min-height: 240px; resize: vertical;
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 15px; line-height: 1.6;
 }
 
-.topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; padding-right: 46px; }
+.field-label {
+  display: block; font-size: 13px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: .04em;
+  color: var(--label-2); margin: 16px 0 7px;
+}
+.field-label:first-child { margin-top: 0; }
+
+/* Schakelaar */
+.switch { position: relative; display: inline-block; width: 51px; height: 31px; flex-shrink: 0; }
+.switch input { position: absolute; opacity: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; z-index: 2; }
+.knob {
+  position: absolute; inset: 0; border-radius: 999px;
+  background: var(--fill-strong); transition: background .25s var(--ease);
+}
+.knob::after {
+  content: ""; position: absolute; top: 2px; left: 2px;
+  width: 27px; height: 27px; border-radius: 50%;
+  background: #fff; box-shadow: 0 2px 5px rgba(0,0,0,.2);
+  transition: transform .25s var(--ease);
+}
+.switch input:checked + .knob { background: var(--green); }
+.switch input:checked + .knob::after { transform: translateX(20px); }
+
+/* ===== Knoppen ===== */
+button { font: inherit; cursor: pointer; touch-action: manipulation; }
+
+.btn-filled, .btn-tinted, .btn-plain {
+  display: block; width: 100%;
+  border: 0; border-radius: 14px;
+  padding: 15px 20px;
+  font-size: 17px; font-weight: 600; letter-spacing: -0.01em;
+  transition: transform .12s var(--ease), filter .15s, background .15s;
+}
+.btn-filled { background: var(--blue); color: #fff; box-shadow: 0 6px 18px rgba(0, 122, 255, .28); margin-top: 20px; }
+.btn-filled:active { transform: scale(.975); filter: brightness(.94); }
+.btn-filled:disabled { background: var(--fill-strong); color: var(--label-3); box-shadow: none; cursor: not-allowed; }
+.btn-tinted { background: var(--fill); color: var(--blue); }
+.btn-tinted:active { background: var(--fill-strong); transform: scale(.985); }
+.btn-plain { background: transparent; color: var(--blue); box-shadow: none; }
+.btn-plain:active { opacity: .55; }
+
+.button-stack { display: flex; flex-direction: column; gap: 9px; margin-top: 18px; }
+.button-stack .btn-filled { margin-top: 0; }
+
+.btn-chip {
+  border: 0; border-radius: 999px;
+  background: var(--fill); color: var(--blue);
+  padding: 8px 15px; font-size: 15px; font-weight: 500;
+}
+.btn-chip:active { background: var(--fill-strong); }
+.chip-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+
+.icon-btn {
+  border: 0; background: transparent; color: var(--label-2);
+  padding: 5px; border-radius: 8px; display: inline-flex;
+}
+.icon-btn.danger { color: var(--red); }
+.icon-btn:active { background: var(--fill); }
+
+/* Volledig scherm */
+.fs-btn {
+  position: fixed;
+  top: calc(14px + env(safe-area-inset-top));
+  right: calc(14px + env(safe-area-inset-right));
+  z-index: 50;
+  width: 36px; height: 36px; padding: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  color: var(--label-2);
+  background: var(--surface);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  backdrop-filter: blur(20px) saturate(180%);
+  border: 0; border-radius: 50%;
+  box-shadow: var(--shadow-s);
+}
+.fs-btn:active { transform: scale(.92); }
+
+/* ===== Panelen ===== */
+.panel {
+  background: var(--surface);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  backdrop-filter: blur(24px) saturate(180%);
+  border-radius: var(--radius-m);
+  box-shadow: var(--shadow-s);
+  padding: 18px;
+  margin-top: 4px;
+}
+.panel.tight { padding: 6px 16px; }
+
+.card {
+  background: var(--surface);
+  -webkit-backdrop-filter: blur(30px) saturate(180%);
+  backdrop-filter: blur(30px) saturate(180%);
+  border-radius: var(--radius-l);
+  box-shadow: var(--shadow-m);
+  padding: 30px 24px;
+  display: flex; flex-direction: column; gap: 16px;
+}
+.card.center { align-items: center; text-align: center; justify-content: center; }
+
+/* ===== Kopbalk van de oefening ===== */
+.topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding-right: 46px; }
+.topbar-note { color: var(--label-2); font-size: 14px; }
 
 .mode-tag {
-  font-weight: 700; font-size: .8rem; text-transform: uppercase; letter-spacing: .05em;
-  padding: 4px 12px; border-radius: 999px; color: white;
+  font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em;
+  padding: 5px 13px; border-radius: 999px; color: #fff;
 }
 .learn-tag { background: var(--learn); }
 .drill-tag { background: var(--drill); }
 
+/* Getinte markering van de huidige stap; bewust geen volle vlakken, die
+   lezen als een knop. De klassenamen beginnen met is- om niet te botsen
+   met .review en .copy elders. */
 .stage-tag {
-  font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em;
-  padding: 3px 10px; border-radius: 999px; color: white;
+  align-self: center;
+  display: inline-block; width: auto;
+  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em;
+  padding: 5px 12px; border-radius: 999px;
 }
-.stage-tag.copy { background: var(--hint); }
-.stage-tag.recall { background: var(--accent); }
-.stage-tag.review { background: var(--bad); }
+.stage-tag.is-copy { color: var(--orange); background: rgba(255,149,0,.15); }
+.stage-tag.is-recall { color: var(--blue); background: rgba(0,122,255,.14); }
+.stage-tag.is-review { color: var(--red); background: rgba(255,59,48,.14); }
 
-.nl-word { font-size: 1.15rem; color: var(--muted); margin: 0; }
-.nl-word.big-nl { font-size: 1.65rem; color: var(--text); font-weight: 700; }
+.nl-word { font-size: 17px; color: var(--label-2); margin: 0; }
+.nl-word.big-nl { font-size: 26px; color: var(--label); font-weight: 700; letter-spacing: -0.02em; }
 
 /* ===== Bubbels ===== */
 .bubbles {
   display: flex; flex-wrap: wrap; justify-content: center;
-  gap: 8px; margin: 10px 0 6px; min-height: 64px; align-items: center;
+  gap: 7px; margin: 8px 0 4px; min-height: 60px; align-items: center;
+  width: 100%;
 }
 
+/* --slot wordt door de app gezet en krimpt mee met de woordlengte. */
 .slot {
   position: relative;
   display: inline-flex; align-items: center; justify-content: center;
-  width: 46px; height: 52px;
-  font-size: 1.7rem; font-weight: 700;
-  font-family: ui-monospace, "SF Mono", monospace;
+  width: var(--slot, 46px);
+  height: calc(var(--slot, 46px) * 1.13);
+  font-size: calc(var(--slot, 46px) * .58);
+  font-weight: 600;
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
 }
-.slot.space { width: 18px; }
+.slot.space { width: calc(var(--slot, 46px) * .34); }
 
 .letter {
   position: relative; z-index: 1;
   opacity: 0; transform: scale(.55);
-  transition: opacity .16s ease, transform .26s cubic-bezier(.3,1.5,.6,1);
+  transition: opacity .16s ease, transform .3s var(--ease);
 }
 /* Na het knappen staat de letter vóór de wegvliegende bubbel, zodat hij meteen scherp leesbaar is. */
 .slot.popped .letter { opacity: 1; transform: scale(1); z-index: 3; }
-.slot.hinted .letter { color: var(--hint); }
-.slot.auto .letter { color: var(--muted); }
+.slot.hinted .letter { color: var(--orange); }
+.slot.auto .letter { color: var(--label-3); }
 
 .bubble {
   position: absolute; inset: 0; border-radius: 50%; z-index: 2;
-  border: 1px solid rgba(255,255,255,.7);
+  border: .5px solid rgba(255, 255, 255, .8);
   background:
-    radial-gradient(circle at 32% 26%, rgba(255,255,255,.98) 0%, rgba(255,255,255,.45) 16%, rgba(255,255,255,0) 42%),
-    radial-gradient(circle at 70% 78%, rgba(255,255,255,.55) 0%, rgba(255,255,255,0) 30%),
-    radial-gradient(circle at 50% 50%, rgba(125,211,252,.75), rgba(167,139,250,.7) 58%, rgba(244,114,182,.6));
-  box-shadow: inset 0 0 14px rgba(255,255,255,.75), 0 3px 10px rgba(80,80,160,.22);
-  animation: bubble-in .38s backwards cubic-bezier(.2,1.5,.5,1), bob 3s ease-in-out infinite;
+    radial-gradient(circle at 32% 26%, rgba(255,255,255,.99) 0%, rgba(255,255,255,.5) 15%, rgba(255,255,255,0) 44%),
+    radial-gradient(circle at 72% 80%, rgba(255,255,255,.6) 0%, rgba(255,255,255,0) 32%),
+    radial-gradient(circle at 50% 50%, rgba(90,200,250,.8), rgba(175,82,222,.66) 58%, rgba(255,45,146,.58));
+  box-shadow: inset 0 0 16px rgba(255,255,255,.8), 0 6px 16px rgba(80, 60, 160, .22);
+  animation: bubble-in .42s backwards var(--ease), bob 3.2s ease-in-out infinite;
   animation-delay: calc(var(--i, 0) * 45ms), calc(var(--i, 0) * 120ms);
 }
 
@@ -203,16 +387,13 @@ textarea {
 }
 
 .slot.current .bubble {
-  box-shadow: inset 0 0 14px rgba(255,255,255,.8), 0 0 0 3px rgba(37,99,235,.35), 0 3px 12px rgba(37,99,235,.3);
+  box-shadow: inset 0 0 16px rgba(255,255,255,.85), 0 0 0 3px rgba(0,122,255,.32), 0 6px 18px rgba(0,122,255,.3);
 }
 
-.slot.popped .bubble {
-  animation: pop .3s cubic-bezier(.3,1.3,.6,1) forwards;
-  pointer-events: none;
-}
+.slot.popped .bubble { animation: pop .32s var(--ease) forwards; pointer-events: none; }
 @keyframes pop {
   0%   { transform: scale(1); opacity: 1; }
-  45%  { transform: scale(1.25); opacity: .65; }
+  45%  { transform: scale(1.25); opacity: .6; }
   100% { transform: scale(1.6); opacity: 0; }
 }
 .slot.auto .bubble { display: none; }
@@ -220,9 +401,9 @@ textarea {
 .slot.wrong .bubble {
   animation: bubble-shake .45s ease;
   background:
-    radial-gradient(circle at 32% 26%, rgba(255,255,255,.9) 0%, rgba(255,255,255,.3) 18%, rgba(255,255,255,0) 44%),
-    radial-gradient(circle at 50% 50%, rgba(252,165,165,.9), rgba(220,38,38,.75));
-  box-shadow: inset 0 0 12px rgba(255,255,255,.5), 0 0 0 3px rgba(220,38,38,.3);
+    radial-gradient(circle at 32% 26%, rgba(255,255,255,.9) 0%, rgba(255,255,255,.35) 18%, rgba(255,255,255,0) 44%),
+    radial-gradient(circle at 50% 50%, rgba(255,150,145,.92), rgba(255,59,48,.8));
+  box-shadow: inset 0 0 14px rgba(255,255,255,.55), 0 0 0 3px rgba(255,59,48,.28);
 }
 @keyframes bubble-shake {
   0%, 100% { transform: translateX(0) rotate(0); }
@@ -232,120 +413,185 @@ textarea {
   80% { transform: translateX(4px) rotate(5deg); }
 }
 
-.bubbles.complete .letter { animation: cheer .5s ease; }
+.bubbles.complete .letter { animation: cheer .5s var(--ease); }
 @keyframes cheer {
   0%, 100% { transform: scale(1); }
-  40% { transform: scale(1.25) translateY(-4px); color: var(--good); }
+  40% { transform: scale(1.22) translateY(-4px); color: var(--green); }
 }
 
-/* ===== Getypte tekst ===== */
-.typed {
-  font-family: ui-monospace, "SF Mono", monospace;
-  font-size: 1.8rem; letter-spacing: .06em;
-  min-height: 2.4rem; border-bottom: 3px solid var(--line);
-  width: 100%; padding: 4px 8px;
-  white-space: pre-wrap; word-break: break-word;
-}
-.typed .ok { color: var(--good); }
-.typed .err { color: var(--bad); background: #fee2e2; border-radius: 3px; }
-.typed .flash-ok { color: var(--good); }
-.typed .cursor {
-  display: inline-block; width: 2px; height: 1.6rem;
-  background: var(--accent); vertical-align: text-bottom;
-  animation: blink 1s step-end infinite;
-}
-@keyframes blink { 50% { opacity: 0; } }
-
-/* Het woord dat je moet overtypen: klein, onder het invulveld */
-.reveal {
-  font-family: ui-monospace, monospace;
-  font-size: .95rem; letter-spacing: .08em;
-  color: var(--hint); background: #fffbeb;
-  border: 1px dashed #fcd34d; border-radius: 8px;
-  padding: 4px 12px; margin: 0;
-}
-
-/* ===== Nakijken: juist woord met jouw fouten eronder ===== */
-.review {
-  display: flex; flex-direction: column; gap: 6px;
-  font-family: ui-monospace, "SF Mono", monospace;
-  background: #fafbfc; border: 1px solid var(--line);
-  border-radius: 10px; padding: 12px 14px;
-}
-.review-row { display: flex; align-items: baseline; gap: 10px; }
-.review-label {
-  font-family: system-ui, sans-serif; font-size: .7rem; text-transform: uppercase;
-  letter-spacing: .08em; color: var(--muted); width: 34px; text-align: right; flex-shrink: 0;
-}
-.review-word { font-size: 1.45rem; letter-spacing: .06em; white-space: pre-wrap; text-align: left; }
-.review-word .d-ok { color: var(--text); }
-.review-word .d-bad { color: var(--bad); background: #fee2e2; border-radius: 3px; }
-.review-word .d-missed { color: var(--good); background: #dcfce7; border-radius: 3px; }
-.review-word .d-gap { display: inline-block; width: 1ch; }
-
-.hint { font-size: .85rem; color: var(--muted); margin: 0; min-height: 1.2em; }
-
+/* ===== Invoer en weergave ===== */
+.type-area { position: relative; width: 100%; max-width: 420px; min-height: 3rem; }
 /* Het invoerveld is onzichtbaar, maar wél zo groot als de weergave eronder.
    Een veld van 1x1px lijkt te werken, maar daarin zet de browser de cursor
    terug op positie 0 zodra een teken via compositie binnenkomt — dan wordt
    "la fenêtre" met een dode toets "trela fenê". Vandaar de volle grootte.
    Meteen ook handig op de telefoon: tikken op de weergave opent het toetsenbord. */
-.type-area { position: relative; width: 100%; max-width: 420px; min-height: 2.9rem; }
 .capture {
   position: absolute; inset: 0; width: 100%; height: 100%;
   opacity: 0; border: 0; padding: 0; margin: 0; background: transparent;
-  font-family: inherit; font-size: 1.8rem; text-align: center; color: inherit;
+  font-family: inherit; font-size: 28px; text-align: center; color: inherit;
 }
 .hidden-file { display: none; }
 
-/* ===== Accentknoppen ===== */
-.accents { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-top: 14px; }
-.accents button {
-  background: var(--card); border: 1px solid var(--line);
-  font-size: 1.05rem; padding: 6px 11px; font-weight: 400;
+.typed {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 28px; letter-spacing: .04em; font-weight: 600;
+  min-height: 2.4rem; width: 100%; padding: 4px 8px;
+  border-bottom: 2px solid var(--separator);
+  white-space: pre-wrap; word-break: break-word;
 }
-.accents button:hover { background: #e5e7eb; }
+.typed .ok { color: var(--green); }
+.typed .err { color: var(--red); background: rgba(255,59,48,.12); border-radius: 4px; }
+.typed .flash-ok { color: var(--green); }
+.typed .cursor {
+  display: inline-block; width: 2px; height: 1.55rem;
+  background: var(--blue); vertical-align: text-bottom; border-radius: 1px;
+  animation: blink 1.1s step-end infinite;
+}
+@keyframes blink { 50% { opacity: 0; } }
+
+/* Het woord dat je moet overtypen: klein, onder het invulveld */
+.reveal {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 15px; letter-spacing: .06em; font-weight: 500;
+  color: var(--orange); background: rgba(255,149,0,.12);
+  border-radius: 999px; padding: 6px 16px; margin: 0;
+}
+
+/* ===== Nakijken ===== */
+.review {
+  display: flex; flex-direction: column; gap: 7px;
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  background: var(--fill); border-radius: var(--radius-s);
+  padding: 14px 16px; width: 100%;
+}
+.review-row { display: flex; align-items: baseline; gap: 11px; }
+.review-label {
+  font-family: -apple-system, system-ui, sans-serif; font-size: 11px;
+  text-transform: uppercase; letter-spacing: .07em; font-weight: 600;
+  color: var(--label-2); width: 32px; text-align: right; flex-shrink: 0;
+}
+.review-word { font-size: 22px; letter-spacing: .04em; white-space: pre-wrap; text-align: left; font-weight: 600; }
+.review-word .d-ok { color: var(--label); }
+.review-word .d-bad { color: var(--red); background: rgba(255,59,48,.14); border-radius: 4px; }
+.review-word .d-missed { color: var(--green); background: rgba(52,199,89,.16); border-radius: 4px; }
+.review-word .d-gap { display: inline-block; width: 1ch; }
+
+.hint { font-size: 14px; color: var(--label-2); margin: 0; min-height: 1.2em; }
+
+/* ===== Accentknoppen ===== */
+.accents { display: flex; flex-wrap: wrap; gap: 7px; justify-content: center; }
+.accents button {
+  background: var(--surface);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  backdrop-filter: blur(16px) saturate(180%);
+  border: 0; border-radius: 11px;
+  box-shadow: var(--shadow-s);
+  min-width: 42px; min-height: 42px;
+  font-size: 19px; font-weight: 500; color: var(--label);
+  transition: transform .1s var(--ease), background .15s;
+}
+.accents button:active { transform: scale(.9); background: var(--fill-strong); }
 
 /* ===== Screenshots importeren ===== */
 .dropzone {
-  border: 2px dashed #b9c2d0; border-radius: 14px;
-  padding: 28px 16px; text-align: center; background: white;
-  cursor: pointer; transition: border-color .15s, background .15s;
+  border: 1.5px dashed var(--label-3); border-radius: var(--radius-m);
+  padding: 30px 18px; text-align: center;
+  background: var(--surface);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  backdrop-filter: blur(24px) saturate(180%);
+  cursor: pointer; transition: border-color .18s, background .18s, transform .12s var(--ease);
 }
-.dropzone:hover, .dropzone.over { border-color: var(--accent); background: #f0f6ff; }
-.dropzone p { margin: 4px 0; }
-.dz-icon { font-size: 2rem; margin: 0 0 4px; }
+.dropzone:active { transform: scale(.99); }
+.dropzone.over { border-color: var(--blue); border-style: solid; background: rgba(0,122,255,.08); }
+@media (hover: hover) { .dropzone:hover { border-color: var(--blue); } }
+.dropzone p { margin: 0; }
+.dropzone .footnote { margin-top: 2px; }
+.dz-icon { color: var(--blue); display: inline-flex; margin-bottom: 8px; }
 
-.thumbs { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
-.thumb { position: relative; width: 96px; height: 96px; border-radius: 10px; overflow: hidden; border: 1px solid var(--line); background: white; }
-.thumb img { width: 100%; height: 100%; object-fit: cover; }
+.thumbs { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+.thumb {
+  position: relative; width: 92px; height: 92px;
+  border-radius: 14px; overflow: hidden;
+  box-shadow: var(--shadow-s); background: var(--surface-solid);
+}
+.thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .thumb-del {
-  position: absolute; top: 3px; right: 3px; width: 22px; height: 22px;
-  padding: 0; border-radius: 50%; background: rgba(0,0,0,.6); color: white;
-  font-size: 15px; line-height: 1;
+  position: absolute; top: 5px; right: 5px; width: 24px; height: 24px;
+  padding: 0; border: 0; border-radius: 50%;
+  background: rgba(0,0,0,.55); color: #fff; font-size: 16px; line-height: 1;
+  -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
 }
 
-.ocr-progress { margin-top: 16px; }
-.bar { height: 8px; background: #e2e6ed; border-radius: 999px; overflow: hidden; }
-.bar-fill { height: 100%; width: 0; background: var(--accent); transition: width .25s ease; }
+.ocr-progress { margin-top: 18px; }
+.bar { height: 6px; background: var(--fill); border-radius: 999px; overflow: hidden; }
+.bar-fill { height: 100%; width: 0; background: var(--blue); border-radius: 999px; transition: width .3s var(--ease); }
 
-.pairs { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
-.pair-row { display: grid; grid-template-columns: 1fr 1fr 34px; gap: 6px; align-items: center; }
-.pair-row.head { font-size: .75rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 700; }
+.pairs { display: flex; flex-direction: column; }
+.pair-row {
+  display: grid; grid-template-columns: 1fr 1fr 32px; gap: 8px; align-items: center;
+  padding: 7px 0; position: relative;
+}
+.pair-row + .pair-row::before {
+  content: ""; position: absolute; left: 0; right: 0; top: 0; height: 1px; background: var(--separator);
+}
+.pair-row.head {
+  font-size: 12px; text-transform: uppercase; letter-spacing: .05em;
+  color: var(--label-2); font-weight: 600;
+}
 .pair-row input {
-  font-size: .95rem; padding: 7px 9px; border: 1px solid var(--line);
-  border-radius: 8px; width: 100%; font-family: inherit;
+  font: inherit; font-size: 15px; padding: 8px 10px; width: 100%;
+  background: var(--fill); color: var(--label);
+  border: 1px solid transparent; border-radius: 9px;
 }
+.pair-row input:focus { outline: none; border-color: var(--blue); background: var(--surface-solid); }
+.pair-row .icon-btn { justify-self: center; }
 
-.details { margin-top: 14px; background: white; border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
-.details summary { cursor: pointer; font-weight: 600; font-size: .9rem; }
-.raw { white-space: pre-wrap; font-size: .8rem; max-height: 260px; overflow: auto; color: var(--muted); }
+/* Voorbeeld van het invoerformaat */
+.voorbeeld {
+  background: var(--fill); border-radius: var(--radius-s);
+  padding: 12px 14px; margin: 0 0 12px;
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 14px; color: var(--label-2);
+  white-space: pre-wrap; overflow-x: auto;
+}
+#editor-count.warn { color: var(--orange); }
+#progress-summary { margin: 18px 0 0; padding: 0 16px; }
+
+.sentence-row { grid-template-columns: 1fr 1fr; font-size: 15px; }
+#sentence-list { margin-bottom: 12px; }
+
+.details {
+  margin-top: 12px; border-radius: var(--radius-m);
+  background: var(--surface);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  backdrop-filter: blur(24px) saturate(180%);
+  box-shadow: var(--shadow-s);
+  padding: 14px 16px;
+}
+.details summary {
+  cursor: pointer; font-weight: 600; font-size: 15px;
+  list-style: none; color: var(--blue);
+}
+.details summary::-webkit-details-marker { display: none; }
+.details[open] summary { margin-bottom: 10px; }
+.raw {
+  white-space: pre-wrap; font-size: 13px; max-height: 260px; overflow: auto;
+  color: var(--label-2); font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  margin: 0;
+}
 
 /* ===== Resultaat ===== */
 .word-results { list-style: none; padding: 0; margin: 0; }
-.word-results li { display: flex; justify-content: space-between; gap: 12px; padding: 6px 0; border-bottom: 1px solid #e5e7eb; }
-.score-good { color: var(--good); font-weight: 600; white-space: nowrap; }
-.score-bad { color: var(--bad); font-weight: 600; white-space: nowrap; }
+.word-results li {
+  display: flex; justify-content: space-between; gap: 14px; align-items: baseline;
+  padding: 11px 0; position: relative; font-size: 16px;
+}
+.word-results li + li::before {
+  content: ""; position: absolute; left: 0; right: 0; top: 0; height: 1px; background: var(--separator);
+}
+.score-good { color: var(--green); font-weight: 600; white-space: nowrap; font-size: 14px; display: inline-flex; align-items: center; gap: 4px; }
+.score-bad { color: var(--red); font-weight: 600; white-space: nowrap; font-size: 14px; }
 
 .shake { animation: shake .3s; }
 @keyframes shake {
@@ -354,47 +600,34 @@ textarea {
   75% { transform: translateX(6px); }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
-}
-
 /* ===== Telefoon ===== */
 @media (max-width: 480px) {
-  .app { padding-left: calc(12px + env(safe-area-inset-left)); padding-right: calc(12px + env(safe-area-inset-right)); }
-  .card { padding: 18px 14px; border-radius: 14px; }
-  .card.center { min-height: 0; }
-  h1 { font-size: 1.45rem; }
-  .slot { width: 40px; height: 46px; font-size: 1.45rem; }
-  .slot.space { width: 12px; }
-  .bubbles { gap: 6px; min-height: 52px; }
-  .nl-word.big-nl { font-size: 1.4rem; }
-  .typed, .capture { font-size: 1.5rem; }
-  .review-word { font-size: 1.2rem; }
-
-  /* Accentknoppen zijn op een telefoon het echte toetsenbord voor accenten:
-     groot genoeg om met een duim te raken. */
-  .accents { gap: 5px; }
-  .accents button { min-width: 40px; min-height: 42px; font-size: 1.15rem; padding: 6px 8px; }
-
-  .row > button { flex: 1 1 auto; }
+  .app { padding-left: calc(14px + env(safe-area-inset-left)); padding-right: calc(14px + env(safe-area-inset-right)); }
+  h1 { font-size: 30px; }
+  h2 { font-size: 25px; }
+  .card { padding: 22px 16px; border-radius: 20px; }
+  .bubbles { min-height: 52px; }
+  .nl-word.big-nl { font-size: 22px; }
+  .typed, .capture { font-size: 24px; }
+  .review-word { font-size: 19px; }
   .pair-row { grid-template-columns: 1fr 1fr 30px; }
-  button.big { width: 100%; }
 }
 
-/* Weinig hoogte (toetsenbord open, of liggend scherm): compacter zodat de
-   bubbels en de accentknoppen samen zichtbaar blijven. */
+/* Weinig hoogte (toetsenbord open, of liggend scherm) */
 @media (max-height: 560px) {
-  .app { padding-top: calc(8px + env(safe-area-inset-top)); padding-bottom: calc(8px + env(safe-area-inset-bottom)); }
-  .card { padding: 12px 14px; gap: 8px; }
-  .card.center { min-height: 0; }
-  .topbar { margin-bottom: 8px; }
-  .slot { width: 36px; height: 40px; font-size: 1.3rem; }
-  .bubbles { min-height: 44px; margin: 4px 0; }
-  .nl-word.big-nl { font-size: 1.25rem; }
-  .typed, .capture { font-size: 1.35rem; }
-  .accents button { min-height: 36px; padding: 4px 8px; }
-  .hint { font-size: .78rem; }
+  .app { padding-top: calc(10px + env(safe-area-inset-top)); padding-bottom: calc(10px + env(safe-area-inset-bottom)); }
+  .card { padding: 14px 16px; gap: 9px; }
+  .topbar { margin-bottom: 9px; }
+  .bubbles { min-height: 42px; margin: 3px 0; }
+  .nl-word.big-nl { font-size: 20px; }
+  .typed, .capture { font-size: 21px; }
+  .accents button { min-height: 37px; min-width: 38px; font-size: 17px; }
+  .hint { font-size: 12px; }
 }
 
-/* In volledig scherm is de knop zelf de enige uitweg: iets zichtbaarder. */
-:fullscreen .fs-btn, :-webkit-full-screen .fs-btn { background: #fff; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important; animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}

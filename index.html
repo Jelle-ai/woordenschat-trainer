@@ -3,12 +3,12 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
-  <title>Woordenschat Trainer — Frans</title>
+  <title>Woordenschat — Frans</title>
   <meta name="description" content="Franse woordenschat leren door te typen: eerst de letters uit de bubbels, daarna uit het hoofd.">
-  <meta name="theme-color" content="#eef1f6" media="(prefers-color-scheme: light)">
-  <meta name="theme-color" content="#eef1f6">
+  <meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
   <link rel="manifest" href="manifest.json">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🫧</text></svg>">
+  <link rel="icon" href="icon-192.png">
   <link rel="apple-touch-icon" href="icon-192.png">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -17,93 +17,193 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <button id="btn-fullscreen" class="fs-btn hidden" type="button" title="Volledig scherm" aria-label="Volledig scherm">⛶</button>
+  <!-- Iconen, eenmalig gedefinieerd en hergebruikt -->
+  <svg class="sprite" aria-hidden="true">
+    <symbol id="i-camera" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M3 8.5A2.5 2.5 0 0 1 5.5 6h1.7a1 1 0 0 0 .84-.46l.72-1.1A1 1 0 0 1 9.6 4h4.8a1 1 0 0 1 .84.44l.72 1.1a1 1 0 0 0 .84.46h1.7A2.5 2.5 0 0 1 21 8.5v8A2.5 2.5 0 0 1 18.5 19h-13A2.5 2.5 0 0 1 3 16.5z"/>
+      <circle cx="12" cy="12.5" r="3.4"/>
+    </symbol>
+    <symbol id="i-keyboard" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="2.5" y="6" width="19" height="12" rx="2.5"/>
+      <path d="M6 9.5h.01M9.5 9.5h.01M13 9.5h.01M16.5 9.5h.01M6 12.7h.01M9.5 12.7h.01M13 12.7h.01M16.5 12.7h.01M8 15.6h8"/>
+    </symbol>
+    <symbol id="i-pencil" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M4 20.5l.9-3.6a2 2 0 0 1 .53-.95L16.1 5.28a2 2 0 0 1 2.83 0l.79.79a2 2 0 0 1 0 2.83L9.05 19.57a2 2 0 0 1-.95.53z"/>
+      <path d="M14.8 6.6l2.6 2.6"/>
+    </symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M4.5 6.5h15M9.5 6.5V5a1.5 1.5 0 0 1 1.5-1.5h2A1.5 1.5 0 0 1 14.5 5v1.5M6.5 6.5l.8 12a2 2 0 0 0 2 1.9h5.4a2 2 0 0 0 2-1.9l.8-12"/>
+    </symbol>
+    <symbol id="i-expand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M9 4H5.5A1.5 1.5 0 0 0 4 5.5V9M15 4h3.5A1.5 1.5 0 0 1 20 5.5V9M9 20H5.5A1.5 1.5 0 0 1 4 18.5V15M15 20h3.5a1.5 1.5 0 0 0 1.5-1.5V15"/>
+    </symbol>
+    <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M4.5 12.8l5 5 10-11"/>
+    </symbol>
+    <symbol id="i-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M9.5 5.5l7 6.5-7 6.5"/>
+    </symbol>
+    <symbol id="i-bubbles" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">
+      <circle cx="8" cy="13.5" r="5"/><circle cx="16.8" cy="8.4" r="3.4"/>
+    </symbol>
+    <symbol id="i-target" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">
+      <circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.4"/>
+    </symbol>
+  </svg>
+
+  <button id="btn-fullscreen" class="fs-btn hidden" type="button" title="Volledig scherm" aria-label="Volledig scherm">
+    <svg width="17" height="17"><use href="#i-expand"/></svg>
+  </button>
 
   <main class="app">
 
     <!-- ===== Startscherm ===== -->
     <section id="screen-start" class="screen">
-      <h1>🫧 Woordenschat Trainer</h1>
-      <p class="subtitle">Eerst de letters uit de bubbels typen, daarna uit het hoofd drillen.</p>
+      <header class="page-head">
+        <h1>Woordenschat</h1>
+        <p class="subtitle">Eerst de letters uit de bubbels, daarna uit het hoofd.</p>
+      </header>
 
-      <div class="card">
-        <label for="list-select">Woordenlijst</label>
-        <div class="row tight">
-          <select id="list-select"></select>
-          <button id="btn-delete-list" class="ghost small" title="Deze lijst verwijderen">🗑</button>
+      <div class="group">
+        <div class="group-row">
+          <span class="row-label">Lijst</span>
+          <div class="row-value">
+            <select id="list-select" aria-label="Woordenlijst"></select>
+            <button id="btn-delete-list" class="icon-btn danger" type="button" title="Deze lijst verwijderen" aria-label="Deze lijst verwijderen">
+              <svg width="18" height="18"><use href="#i-trash"/></svg>
+            </button>
+          </div>
         </div>
-
-        <label for="batch-size">Woorden per ronde</label>
-        <select id="batch-size">
-          <option value="5">5</option>
-          <option value="7">7</option>
-          <option value="10">10</option>
-          <option value="15">15</option>
-        </select>
-
-        <label class="checkbox">
-          <input type="checkbox" id="strict-accents">
-          Streng op accenten (é ≠ e)
+        <div class="group-row">
+          <span class="row-label">Woorden per ronde</span>
+          <div class="row-value">
+            <select id="batch-size" aria-label="Woorden per ronde">
+              <option value="5">5</option>
+              <option value="7">7</option>
+              <option value="10">10</option>
+              <option value="15">15</option>
+            </select>
+          </div>
+        </div>
+        <label class="group-row" for="strict-accents">
+          <span class="row-label">Streng op accenten</span>
+          <span class="row-value">
+            <span class="switch"><input type="checkbox" id="strict-accents"><span class="knob"></span></span>
+          </span>
         </label>
-
-        <button id="btn-start" class="primary big">Start ronde</button>
       </div>
 
-      <div class="row">
-        <button id="btn-import" class="ghost">📷 Screenshots importeren</button>
-        <button id="btn-edit-words" class="ghost">✏️ Lijst aanpassen</button>
+      <button id="btn-start" class="btn-filled" type="button">Start ronde</button>
+
+      <p class="group-title">Hele lijst</p>
+      <div class="group">
+        <button id="btn-learn-all" class="group-row action" type="button">
+          <span class="row-icon learn"><svg width="17" height="17"><use href="#i-bubbles"/></svg></span>
+          <span class="row-label">Lijst leren</span>
+          <span class="row-note" id="learn-all-note"></span>
+          <svg class="chev" width="15" height="15"><use href="#i-chevron"/></svg>
+        </button>
+        <button id="btn-drill-all" class="group-row action" type="button">
+          <span class="row-icon drill"><svg width="17" height="17"><use href="#i-target"/></svg></span>
+          <span class="row-label">Lijst oefenen</span>
+          <span class="row-note" id="drill-all-note"></span>
+          <svg class="chev" width="15" height="15"><use href="#i-chevron"/></svg>
+        </button>
       </div>
 
-      <p id="progress-summary" class="muted"></p>
+      <p class="group-title">Woordenlijsten</p>
+      <div class="group">
+        <button id="btn-import" class="group-row action" type="button">
+          <span class="row-icon blue"><svg width="17" height="17"><use href="#i-camera"/></svg></span>
+          <span class="row-label">Screenshots importeren</span>
+          <svg class="chev" width="15" height="15"><use href="#i-chevron"/></svg>
+        </button>
+        <button id="btn-new-list" class="group-row action" type="button">
+          <span class="row-icon green"><svg width="17" height="17"><use href="#i-keyboard"/></svg></span>
+          <span class="row-label">Zelf een lijst typen</span>
+          <svg class="chev" width="15" height="15"><use href="#i-chevron"/></svg>
+        </button>
+        <button id="btn-edit-words" class="group-row action" type="button">
+          <span class="row-icon gray"><svg width="17" height="17"><use href="#i-pencil"/></svg></span>
+          <span class="row-label">Lijst aanpassen</span>
+          <svg class="chev" width="15" height="15"><use href="#i-chevron"/></svg>
+        </button>
+      </div>
+
+      <p id="progress-summary" class="footnote"></p>
     </section>
 
     <!-- ===== Woordenlijst bewerken ===== -->
     <section id="screen-words" class="screen hidden">
-      <h2>Woordenlijst bewerken</h2>
-      <label for="list-name-input">Naam</label>
-      <input id="list-name-input" type="text" class="text-input" placeholder="Naam van de lijst">
-      <p class="muted">Eén woord per regel: <code>frans = nederlands</code></p>
-      <textarea id="words-input" spellcheck="false"></textarea>
-      <div class="row">
-        <button id="btn-save-words" class="primary">Opslaan</button>
-        <button id="btn-save-as-new" class="ghost">Opslaan als nieuwe lijst</button>
-        <button id="btn-cancel-words" class="ghost">Terug</button>
+      <header class="page-head">
+        <h2>Woordenlijst</h2>
+      </header>
+
+      <div class="panel">
+        <label class="field-label" for="list-name-input">Naam</label>
+        <input id="list-name-input" type="text" class="text-input" placeholder="Naam van de lijst">
+
+        <label class="field-label" for="words-input">Woorden</label>
+        <p class="footnote">Eén woordpaar per regel, met een <code>=</code> ertussen:</p>
+        <pre class="voorbeeld">le chien = de hond
+la fenêtre = het raam
+manger = eten</pre>
+        <textarea id="words-input" spellcheck="false" placeholder="le chien = de hond"></textarea>
+        <p id="editor-count" class="footnote"></p>
+      </div>
+
+      <div class="button-stack">
+        <button id="btn-save-words" class="btn-filled" type="button">Opslaan</button>
+        <button id="btn-save-as-new" class="btn-tinted" type="button">Opslaan als nieuwe lijst</button>
+        <button id="btn-cancel-words" class="btn-plain" type="button">Terug</button>
       </div>
     </section>
 
     <!-- ===== Screenshots importeren ===== -->
     <section id="screen-import" class="screen hidden">
-      <h2>📷 Screenshots importeren</h2>
-      <p class="muted">Sleep screenshots hierin, plak met Ctrl/⌘+V, of kies bestanden. Elk beeldformaat mag.</p>
+      <header class="page-head">
+        <h2>Screenshots importeren</h2>
+        <p class="subtitle">Sleep ze hierin, plak met Ctrl/&#8984;+V, of kies bestanden. Elk beeldformaat mag.</p>
+      </header>
 
-      <div id="dropzone" class="dropzone" tabindex="0">
-        <p class="dz-icon">🖼️</p>
-        <p><strong>Klik, sleep of plak</strong> je screenshots hier</p>
+      <div id="dropzone" class="dropzone" tabindex="0" role="button" aria-label="Screenshots kiezen">
+        <span class="dz-icon"><svg width="26" height="26"><use href="#i-camera"/></svg></span>
+        <p><strong>Klik, sleep of plak</strong></p>
+        <p class="footnote">je screenshots hier</p>
         <input id="file-input" type="file" accept="image/*" multiple class="hidden-file">
       </div>
 
       <div id="thumbs" class="thumbs"></div>
 
-      <div class="row">
-        <button id="btn-run-ocr" class="primary" disabled>Woorden herkennen</button>
-        <button id="btn-cancel-import" class="ghost">Terug</button>
+      <div class="button-stack">
+        <button id="btn-run-ocr" class="btn-filled" type="button" disabled>Woorden herkennen</button>
+        <button id="btn-cancel-import" class="btn-plain" type="button">Terug</button>
       </div>
 
       <div id="ocr-progress" class="ocr-progress hidden">
         <div class="bar"><div id="ocr-bar" class="bar-fill"></div></div>
-        <p id="ocr-status" class="muted"></p>
+        <p id="ocr-status" class="footnote"></p>
       </div>
 
       <div id="import-result" class="hidden">
         <h3 id="import-count"></h3>
-        <div class="row tight">
-          <button id="btn-swap-cols" class="ghost small">⇄ Kolommen wisselen</button>
-          <button id="btn-add-row" class="ghost small">+ Rij toevoegen</button>
+        <div class="chip-row">
+          <button id="btn-swap-cols" class="btn-chip" type="button">Kolommen wisselen</button>
+          <button id="btn-add-row" class="btn-chip" type="button">Rij toevoegen</button>
         </div>
-        <div class="pairs" id="pairs-table"></div>
+        <div class="panel tight">
+          <div class="pairs" id="pairs-table"></div>
+        </div>
+
+        <details id="sentence-details" class="details hidden">
+          <summary>Overgeslagen zinnen (<span id="sentence-count">0</span>)</summary>
+          <p class="footnote">Voorbeeldzinnen en opmerkingen die tussen de woorden stonden. Ze horen niet in de oefening, maar zijn niet weggegooid.</p>
+          <div class="pairs" id="sentence-list"></div>
+          <button id="btn-add-sentences" class="btn-chip" type="button">Toch allemaal toevoegen</button>
+        </details>
 
         <details id="unparsed-details" class="details hidden">
-          <summary>Niet herkende regels (<span id="unparsed-count">0</span>) — hier staat niets tussen dat vergeten mag worden</summary>
+          <summary>Niet herkende regels (<span id="unparsed-count">0</span>)</summary>
           <pre id="unparsed-text" class="raw"></pre>
         </details>
 
@@ -112,10 +212,12 @@
           <pre id="raw-text" class="raw"></pre>
         </details>
 
-        <label for="import-name">Naam van deze lijst</label>
-        <input id="import-name" type="text" class="text-input" placeholder="bv. Unité 3 — school">
-        <div class="row">
-          <button id="btn-save-import" class="primary big">Lijst opslaan</button>
+        <div class="panel">
+          <label class="field-label" for="import-name">Naam van deze lijst</label>
+          <input id="import-name" type="text" class="text-input" placeholder="bv. Unité 3 — school">
+        </div>
+        <div class="button-stack">
+          <button id="btn-save-import" class="btn-filled" type="button">Lijst opslaan</button>
         </div>
       </div>
     </section>
@@ -124,7 +226,7 @@
     <section id="screen-learn" class="screen hidden">
       <div class="topbar">
         <span class="mode-tag learn-tag">Leren</span>
-        <span id="learn-progress" class="muted"></span>
+        <span id="learn-progress" class="topbar-note"></span>
       </div>
       <div class="card center">
         <p class="nl-word" id="learn-nl"></p>
@@ -140,8 +242,8 @@
     <!-- ===== Drilmodus ===== -->
     <section id="screen-drill" class="screen hidden">
       <div class="topbar">
-        <span class="mode-tag drill-tag">Drillen</span>
-        <span id="drill-progress" class="muted"></span>
+        <span class="mode-tag drill-tag">Oefenen</span>
+        <span id="drill-progress" class="topbar-note"></span>
       </div>
       <div class="card center">
         <p class="nl-word big-nl" id="drill-nl"></p>
@@ -165,12 +267,16 @@
 
     <!-- ===== Resultaat ===== -->
     <section id="screen-done" class="screen hidden">
-      <h2>Ronde klaar! 🎉</h2>
-      <div class="card">
-        <p id="done-stats"></p>
+      <header class="page-head">
+        <h2>Ronde klaar</h2>
+        <p class="subtitle" id="done-stats"></p>
+      </header>
+      <div class="panel tight">
         <ul id="done-words" class="word-results"></ul>
-        <button id="btn-again" class="primary big">Nieuwe ronde</button>
-        <button id="btn-home" class="ghost">Naar start</button>
+      </div>
+      <div class="button-stack">
+        <button id="btn-again" class="btn-filled" type="button">Nog een ronde</button>
+        <button id="btn-home" class="btn-plain" type="button">Naar start</button>
       </div>
     </section>
 
