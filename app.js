@@ -6,10 +6,6 @@ let stats = Storage.getStats();
 let activeList = Storage.getList(Storage.activeId());
 
 Sound.zetAan(settings.sound);
-// Browsers laten geluid pas toe na een aanraking of toetsaanslag.
-["pointerdown", "keydown"].forEach((ev) =>
-  addEventListener(ev, () => Sound.ontgrendel(), { once: true })
-);
 
 // Elk woord wordt één keer gevraagd. Wat je fout hebt of met hulp deed, gaat
 // terug in de rij en komt later in de ronde opnieuw langs.
@@ -419,6 +415,10 @@ function finishLearnWord() {
   $("learn-hint").textContent = "Juist";
   setTimeout(() => {
     $("learn-bubbles").classList.remove("complete");
+    learn.slots.forEach((slot) => {
+      const letter = slot.querySelector(".letter");
+      if (letter) letter.style.willChange = "";
+    });
     session.learnIndex++;
     if (session.learnIndex < session.batch.length) showLearnWord();
     else if (session.mode === "leren") finishSession();

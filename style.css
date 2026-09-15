@@ -345,8 +345,8 @@ button { font: inherit; cursor: pointer; touch-action: manipulation; }
 
 .card {
   background: var(--surface);
-  -webkit-backdrop-filter: blur(30px) saturate(180%);
-  backdrop-filter: blur(30px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  backdrop-filter: blur(20px) saturate(180%);
   border-radius: var(--radius-l);
   box-shadow: var(--shadow-m);
   padding: 30px 24px;
@@ -427,7 +427,7 @@ button { font: inherit; cursor: pointer; touch-action: manipulation; }
 .letter {
   position: relative; z-index: 1;
   opacity: 0; transform: scale(.55);
-  transition: opacity .16s ease, transform .3s var(--ease);
+  transition: opacity .16s ease, transform .3s var(--ease), color .2s ease;
 }
 /* Na het knappen staat de letter vóór de wegvliegende bubbel, zodat hij meteen scherp leesbaar is. */
 .slot.popped .letter { opacity: 1; transform: scale(1); z-index: 3; }
@@ -442,6 +442,7 @@ button { font: inherit; cursor: pointer; touch-action: manipulation; }
     radial-gradient(circle at 72% 80%, rgba(255,255,255,.6) 0%, rgba(255,255,255,0) 32%),
     radial-gradient(circle at 50% 50%, rgba(90,200,250,.8), rgba(175,82,222,.66) 58%, rgba(255,45,146,.58));
   box-shadow: inset 0 0 16px rgba(255,255,255,.8), 0 6px 16px rgba(80, 60, 160, .22);
+  will-change: transform, opacity;
   animation: bubble-in .42s backwards var(--ease), bob 3.2s ease-in-out infinite;
   animation-delay: calc(var(--i, 0) * 45ms), calc(var(--i, 0) * 120ms);
 }
@@ -482,10 +483,19 @@ button { font: inherit; cursor: pointer; touch-action: manipulation; }
   80% { transform: translateX(4px) rotate(5deg); }
 }
 
-.bubbles.complete .letter { animation: cheer .5s var(--ease); }
+/* De viering veert per letter op, kort na elkaar: dat leest als een golf en
+   scheelt werk, want er wordt alleen transform geanimeerd. De kleur verandert
+   één keer via een overgang in plaats van elk beeldje opnieuw. */
+.bubbles.complete .letter {
+  color: var(--green);
+  animation: cheer .42s cubic-bezier(.34, 1.5, .64, 1) both;
+  animation-delay: calc(var(--i, 0) * 34ms);
+  will-change: transform;
+}
 @keyframes cheer {
-  0%, 100% { transform: scale(1); }
-  40% { transform: scale(1.22) translateY(-4px); color: var(--green); }
+  0%   { transform: scale(1) translateY(0); }
+  45%  { transform: scale(1.16) translateY(-5px); }
+  100% { transform: scale(1) translateY(0); }
 }
 
 /* ===== Invoer en weergave ===== */
@@ -511,7 +521,16 @@ button { font: inherit; cursor: pointer; touch-action: manipulation; }
 }
 .typed .ok { color: var(--green); }
 .typed .err { color: var(--red); background: rgba(255,59,48,.12); border-radius: 4px; }
-.typed .flash-ok { color: var(--green); }
+.typed .flash-ok {
+  color: var(--green);
+  display: inline-flex; align-items: center; gap: 6px;
+  animation: flash-in .34s cubic-bezier(.34, 1.5, .64, 1) both;
+  will-change: transform;
+}
+@keyframes flash-in {
+  0%   { transform: scale(.82); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
 .typed .cursor {
   display: inline-block; width: 2px; height: 1.55rem;
   background: var(--blue); vertical-align: text-bottom; border-radius: 1px;
@@ -566,9 +585,7 @@ button { font: inherit; cursor: pointer; touch-action: manipulation; }
 /* ===== Accentknoppen ===== */
 .accents { display: flex; flex-wrap: wrap; gap: 7px; justify-content: center; }
 .accents button {
-  background: var(--surface);
-  -webkit-backdrop-filter: blur(16px) saturate(180%);
-  backdrop-filter: blur(16px) saturate(180%);
+  background: var(--surface-solid);
   border: 0; border-radius: 11px;
   box-shadow: var(--shadow-s);
   min-width: 42px; min-height: 42px;

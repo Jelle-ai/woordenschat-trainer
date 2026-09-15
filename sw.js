@@ -1,6 +1,6 @@
 // Service worker: de app werkt offline op de telefoon.
 // Bij een nieuwe versie hieronder het versienummer ophogen.
-const VERSION = "v2";
+const VERSION = "v3";
 const SHELL_CACHE = "wst-shell-" + VERSION;
 const RUNTIME_CACHE = "wst-runtime-" + VERSION;
 

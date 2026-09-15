@@ -28,7 +28,8 @@ bewaarde ronde; je kunt hem ook zelf weggooien met het prullenbakje.
 
 De klanken worden ter plekke opgewekt met de Web Audio API, niet uit bestanden
 geladen: dat scheelt megabytes, werkt offline en laat de toonhoogte meelopen met
-wat er gebeurt. Elke bubbel die knapt klinkt een stapje hoger, dus een woord
+wat er gebeurt. De geluidscontext wordt pas bij je eerste aanraking aangemaakt,
+want een context die daarvoor al bestaat blijft in veel browsers stil hangen. Elke bubbel die knapt klinkt een stapje hoger, dus een woord
 uittypen levert een klein loopje op. Een weggegeven letter klinkt doffer, een
 foute letter kort en laag, een goed woord als een opgaande drieklank en een fout
 woord als twee dalende tonen. Uit te zetten in de instellingen.
