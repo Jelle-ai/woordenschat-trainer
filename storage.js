@@ -4,6 +4,7 @@ const Storage = (() => {
   const K_ACTIVE = "wst_active_v2";
   const K_STATS = "wst_stats_v2";
   const K_SETTINGS = "wst_settings_v2";
+  const K_SESSION = "wst_session_v1";
 
   const DEFAULT_ID = "default";
 
@@ -85,6 +86,22 @@ const Storage = (() => {
     write(K_STATS, stats);
   }
 
+  // ---------- Onderbroken ronde ----------
+  // Zodat je verder kunt waar je gebleven was als je terugkomt op de site.
+  function getSession() {
+    const s = read(K_SESSION, null);
+    if (!s || s.v !== 1 || !Array.isArray(s.batch) || !s.batch.length) return null;
+    return s;
+  }
+
+  function saveSession(session) {
+    write(K_SESSION, session);
+  }
+
+  function clearSession() {
+    try { localStorage.removeItem(K_SESSION); } catch (e) { /* privemodus */ }
+  }
+
   function getSettings() {
     const s = read(K_SETTINGS, {});
     return {
@@ -92,6 +109,7 @@ const Storage = (() => {
       strictAccents: !!s.strictAccents,
       direction: s.direction || "nl-fr", // nl-fr, fr-nl of gemengd
       showAccents: s.showAccents !== false,
+      sound: s.sound !== false,
     };
   }
 
@@ -111,5 +129,8 @@ const Storage = (() => {
     saveStats,
     getSettings,
     saveSettings,
+    getSession,
+    saveSession,
+    clearSession,
   };
 })();

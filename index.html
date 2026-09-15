@@ -47,6 +47,9 @@
       <circle cx="12" cy="12" r="3.1"/>
       <path d="M19.4 14.4a1.5 1.5 0 0 0 .3 1.65l.05.06a1.8 1.8 0 1 1-2.55 2.55l-.06-.06a1.5 1.5 0 0 0-1.65-.3 1.5 1.5 0 0 0-.9 1.37v.17a1.8 1.8 0 1 1-3.6 0v-.09a1.5 1.5 0 0 0-.98-1.37 1.5 1.5 0 0 0-1.65.3l-.06.06a1.8 1.8 0 1 1-2.55-2.55l.06-.06a1.5 1.5 0 0 0 .3-1.65 1.5 1.5 0 0 0-1.37-.9h-.17a1.8 1.8 0 1 1 0-3.6h.09a1.5 1.5 0 0 0 1.37-.98 1.5 1.5 0 0 0-.3-1.65l-.06-.06A1.8 1.8 0 1 1 7.72 3.4l.06.06a1.5 1.5 0 0 0 1.65.3h.07a1.5 1.5 0 0 0 .9-1.37v-.17a1.8 1.8 0 1 1 3.6 0v.09a1.5 1.5 0 0 0 .9 1.37 1.5 1.5 0 0 0 1.65-.3l.06-.06a1.8 1.8 0 1 1 2.55 2.55l-.06.06a1.5 1.5 0 0 0-.3 1.65v.07a1.5 1.5 0 0 0 1.37.9h.17a1.8 1.8 0 1 1 0 3.6h-.09a1.5 1.5 0 0 0-1.37.9z"/>
     </symbol>
+    <symbol id="i-rotate" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M20 11.5a8 8 0 1 1-2.4-5.7"/><path d="M20 4v4.2h-4.2"/>
+    </symbol>
     <symbol id="i-swap" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
       <path d="M4 8h13l-3.2-3.2M20 16H7l3.2 3.2"/>
     </symbol>
@@ -69,6 +72,23 @@
         <h1>Woordenschat</h1>
         <p class="subtitle">Eerst de letters uit de bubbels, daarna uit het hoofd.</p>
       </header>
+
+      <div id="resume-card" class="group hidden">
+        <button id="btn-resume" class="group-row action" type="button">
+          <span class="row-icon green"><svg width="17" height="17"><use href="#i-target"/></svg></span>
+          <span class="resume-text">
+            <span class="row-label">Verder waar je gebleven was</span>
+            <span class="footnote" id="resume-note"></span>
+          </span>
+          <svg class="chev" width="15" height="15"><use href="#i-chevron"/></svg>
+        </button>
+        <div class="group-row resume-bar">
+          <div class="progress" id="resume-progress" role="progressbar" aria-label="Voortgang van de onderbroken ronde" aria-valuemin="0" aria-valuemax="100"><span class="progress-fill"></span></div>
+          <button id="btn-discard-resume" class="icon-btn danger" type="button" title="Deze ronde vergeten" aria-label="Deze ronde vergeten">
+            <svg width="17" height="17"><use href="#i-trash"/></svg>
+          </button>
+        </div>
+      </div>
 
       <div class="group">
         <div class="group-row">
@@ -105,6 +125,12 @@
           <span class="row-label">Streng op accenten</span>
           <span class="row-value">
             <span class="switch"><input type="checkbox" id="strict-accents"><span class="knob"></span></span>
+          </span>
+        </label>
+        <label class="group-row" for="sound-on">
+          <span class="row-label">Geluid</span>
+          <span class="row-value">
+            <span class="switch"><input type="checkbox" id="sound-on"><span class="knob"></span></span>
           </span>
         </label>
         <button id="btn-fullscreen" class="group-row action hidden" type="button">
@@ -342,6 +368,12 @@ manger = eten</pre>
             <span class="switch"><input type="checkbox" id="sheet-strict"><span class="knob"></span></span>
           </span>
         </label>
+        <label class="group-row" for="sheet-sound">
+          <span class="row-label">Geluid</span>
+          <span class="row-value">
+            <span class="switch"><input type="checkbox" id="sheet-sound"><span class="knob"></span></span>
+          </span>
+        </label>
         <label class="group-row" for="sheet-accentbar">
           <span class="row-label">Accentknoppen tonen</span>
           <span class="row-value">
@@ -376,6 +408,7 @@ manger = eten</pre>
     }
   </script>
   <script src="words.js"></script>
+  <script src="sound.js"></script>
   <script src="storage.js"></script>
   <script src="ocr.js"></script>
   <script src="app.js"></script>

@@ -16,6 +16,23 @@ Welke kolom het Frans is, zoekt de app zelf uit — op accenten, lidwoorden en
 typische uitgangen. Typ je een lijst met het Nederlands vooraan, dan meldt de
 teller dat en worden de kolommen bij het opslaan omgedraaid.
 
+## Verder waar je gebleven was
+
+Sluit je het tabblad midden in een ronde, dan staat er bij je volgende bezoek
+een kaart bovenaan het startscherm met de lijst, of je aan het leren of oefenen
+was, en een balk met hoe ver je was. Eén tik en je gaat verder met precies de
+woorden die nog openstonden. Pas je de lijst intussen aan, dan vervalt de
+bewaarde ronde; je kunt hem ook zelf weggooien met het prullenbakje.
+
+## Geluid
+
+De klanken worden ter plekke opgewekt met de Web Audio API, niet uit bestanden
+geladen: dat scheelt megabytes, werkt offline en laat de toonhoogte meelopen met
+wat er gebeurt. Elke bubbel die knapt klinkt een stapje hoger, dus een woord
+uittypen levert een klein loopje op. Een weggegeven letter klinkt doffer, een
+foute letter kort en laag, een goed woord als een opgaande drieklank en een fout
+woord als twee dalende tonen. Uit te zetten in de instellingen.
+
 ## Tijdens het oefenen
 
 Linksboven staat een terugknop naar het startscherm (Escape doet hetzelfde),
@@ -67,8 +84,9 @@ Heb je een woordenlijst op je scherm of in een boek staan? Maak er screenshots
 van en laat de app de woorden eruit halen — klikken, slepen of plakken met
 Ctrl/⌘+V, meerdere tegelijk mag.
 
-De herkenning gebeurt volledig in je browser (Tesseract draait lokaal mee in
-`vendor/`, er gaat niets naar een server) en werkt met:
+De herkenning gebeurt volledig in je browser met Tesseract, een open source
+OCR-engine die lokaal meedraait in `vendor/`; er gaat niets naar een server.
+Werkt met:
 
 - twee kolommen naast elkaar, in beide volgordes (Frans links of rechts)
 - voorbeeldzinnen en opmerkingen tussen de rijen, die apart worden gezet
@@ -76,6 +94,11 @@ De herkenning gebeurt volledig in je browser (Tesseract draait lokaal mee in
 - genummerde lijsten en opsommingstekens
 - screenshots in donkere modus (die worden automatisch omgekeerd)
 - kleine screenshots (die worden opgeschaald voor betere herkenning)
+- foto's van een boekpagina: scheefstand wordt rechtgezet, en bij ongelijk licht
+  (schaduw over de bladzijde) gaat de app over op een plaatselijke drempel in
+  plaats van één vaste, want anders verdwijnt de tekst in de donkere hoek
+- foto's op hun kant: met de draaiknop op de miniatuur zet je ze recht
+- grote foto's, die eerst verkleind worden zodat het lezen snel blijft
 
 Kolommen worden herkend aan de posities van de woorden op het beeld, niet aan
 de tekstvolgorde — dat is nodig omdat OCR een tabel vaak kolom-voor-kolom
@@ -87,6 +110,10 @@ breedte doorloopt heeft dat niet en wordt dus niet als woordpaar gelezen. En wat
 er qua vorm uitziet als een zin — te lang, te veel woorden, of eindigend op een
 punt — komt in een apart blokje "Overgeslagen zinnen" te staan. Daar kun je ze
 alsnog toevoegen als de app zich vergist.
+
+Regels die de OCR onzeker las worden oranje gemarkeerd in de tabel, met erboven
+hoeveel er nagekeken moeten worden — zo weet je waar je moet kijken zonder alles
+te hoeven vergelijken.
 
 Daarna krijg je alles ter controle te zien: een tabel die je kunt bijwerken,
 een knop om de kolommen te wisselen, en twee uitklapbare blokken met de ruwe

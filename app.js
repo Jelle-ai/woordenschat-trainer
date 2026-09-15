@@ -5,6 +5,12 @@ let settings = Storage.getSettings();
 let stats = Storage.getStats();
 let activeList = Storage.getList(Storage.activeId());
 
+Sound.zetAan(settings.sound);
+// Browsers laten geluid pas toe na een aanraking of toetsaanslag.
+["pointerdown", "keydown"].forEach((ev) =>
+  addEventListener(ev, () => Sound.ontgrendel(), { once: true })
+);
+
 // Elk woord wordt één keer gevraagd. Wat je fout hebt of met hulp deed, gaat
 // terug in de rij en komt later in de ronde opnieuw langs.
 const CORRECT_NEEDED = 1;
@@ -222,12 +228,90 @@ function startSession(mode) {
   };
   session.batch.forEach((w) => (session.results[keyOf(w)] = { errors: 0, hints: 0, helped: false }));
 
+  Storage.clearSession();
   if (kind === "oefenen") startDrill();
   else startLearn();
 }
 
 function lastMode() {
   return (session && session.mode) || "ronde";
+}
+
+// ---------- Onderbroken ronde bewaren ----------
+// De rij verwijst naar plekken in batch, zodat er niets dubbel opgeslagen wordt.
+function storeSession() {
+  if (!session) return;
+  const phase = !$("screen-drill").classList.contains("hidden") || session.queue ? "drill" : "learn";
+  Storage.saveSession({
+    v: 1,
+    listId: activeList.id,
+    listLength: activeList.words.length,
+    mode: session.mode,
+    phase: session.queue ? "drill" : "learn",
+    learnIndex: session.learnIndex,
+    batch: session.batch,
+    queue: session.queue ? session.queue.map((it) => ({ i: session.batch.indexOf(it.w), left: it.left })) : null,
+    results: session.results,
+    savedAt: Date.now(),
+  });
+}
+
+function savedSession() {
+  const saved = Storage.getSession();
+  if (!saved) return null;
+  const list = Storage.allLists().find((l) => l.id === saved.listId);
+  // Is de lijst weg of gewijzigd, dan klopt de bewaarde ronde niet meer.
+  if (!list || list.words.length !== saved.listLength) return null;
+  return saved;
+}
+
+function resumeProgress(saved) {
+  if (saved.phase === "drill" && saved.queue) {
+    return saved.batch.length ? (saved.batch.length - saved.queue.length) / saved.batch.length : 0;
+  }
+  return saved.batch.length ? saved.learnIndex / saved.batch.length : 0;
+}
+
+function resumeSession() {
+  const saved = savedSession();
+  if (!saved) { updateResumeCard(); return; }
+
+  Storage.setActiveId(saved.listId);
+  activeList = Storage.getList(saved.listId);
+
+  session = {
+    mode: saved.mode,
+    batch: saved.batch,
+    learnIndex: saved.learnIndex,
+    results: saved.results,
+  };
+
+  if (saved.phase === "drill" && saved.queue) {
+    session.queue = saved.queue
+      .filter((q) => q.i >= 0 && q.i < session.batch.length)
+      .map((q) => ({ w: session.batch[q.i], left: q.left }));
+    session.enterArmed = false;
+    showScreen("screen-drill");
+    nextDrillWord();
+  } else {
+    startLearn();
+  }
+}
+
+function forgetSession() {
+  Storage.clearSession();
+  updateResumeCard();
+}
+
+function updateResumeCard() {
+  const saved = savedSession();
+  const card = $("resume-card");
+  card.classList.toggle("hidden", !saved);
+  if (!saved) return;
+  const list = Storage.allLists().find((l) => l.id === saved.listId);
+  const bezig = saved.phase === "drill" ? "oefenen" : "leren";
+  $("resume-note").textContent = `${list ? list.name : "Woordenlijst"} · ${bezig}`;
+  setProgress($("resume-progress"), resumeProgress(saved));
 }
 
 function bumpStat(fr, key) {
@@ -258,6 +342,7 @@ function showLearnWord() {
   learn.pos = 0;
   learn.done = false;
   learn.slots = buildBubbles($("learn-bubbles"), learn.chars, learn.auto);
+  storeSession();
 
   skipAutoChars();
   markCurrent();
@@ -316,6 +401,9 @@ function popBubble(idx, hinted) {
 }
 
 function advanceLearn(hinted) {
+  const toon = learn.chars.slice(0, learn.pos).filter((c, i) => !learn.auto[i]).length;
+  if (hinted) Sound.hint(toon);
+  else Sound.pop(toon);
   popBubble(learn.pos, hinted);
   learn.pos++;
   skipAutoChars();
@@ -325,6 +413,7 @@ function advanceLearn(hinted) {
 
 function finishLearnWord() {
   learn.done = true;
+  Sound.juist();
   learn.slots.forEach((s) => s.classList.remove("current"));
   $("learn-bubbles").classList.add("complete");
   $("learn-hint").textContent = "Juist";
@@ -348,6 +437,7 @@ function onLearnKeystrokes() {
     if (eqChar(ch, learn.chars[learn.pos])) {
       advanceLearn(false);
     } else {
+      Sound.mis();
       const slot = learn.slots[learn.pos];
       if (slot) {
         slot.classList.add("wrong");
@@ -399,6 +489,7 @@ function nextDrillWord() {
     return;
   }
   $("drill-nl").textContent = promptOf(currentDrill().w);
+  storeSession();
   setProgress($("drill-progress"), drillProgress());
   setDrillState(ANSWER);
 }
@@ -577,6 +668,7 @@ function onDrillEnter() {
   }
 
   // Fout antwoord
+  Sound.fout();
   bumpStat(key, "wrong");
   session.results[key].errors++;
   session.results[key].helped = true;
@@ -585,6 +677,7 @@ function onDrillEnter() {
 }
 
 function giveUp(item) {
+  Sound.fout();
   const key = keyOf(item.w);
   bumpStat(key, "wrong");
   session.results[key].hints++;
@@ -594,6 +687,7 @@ function giveUp(item) {
 }
 
 function flashCorrect(fr) {
+  Sound.juist();
   const typedEl = $("drill-typed");
   typedEl.innerHTML = "";
   const ok = span("", "flash-ok");
@@ -623,6 +717,8 @@ function updateAccentBar() {
 
 // ---------- Resultaat ----------
 function finishSession() {
+  Storage.clearSession();
+  Sound.klaar();
   showScreen("screen-done");
   const totalErrors = Object.values(session.results).reduce((s, r) => s + r.errors, 0);
   const helped = Object.values(session.results).filter((r) => r.helped).length;
@@ -723,8 +819,10 @@ function goHome() {
   $("batch-size").value = String(settings.batchSize);
   $("strict-accents").checked = settings.strictAccents;
   $("direction").value = settings.direction;
+  $("sound-on").checked = settings.sound;
   showScreen("screen-start");
   updateSummary();
+  updateResumeCard();
 }
 
 // ---------- Woordenlijst bewerken ----------
@@ -804,10 +902,11 @@ function saveWordList(asNew) {
 }
 
 // ================= SCREENSHOTS IMPORTEREN =================
-const importState = { files: [], pairs: [], raw: "", unparsed: [], sentences: [] };
+const importState = { files: [], rotations: [], pairs: [], raw: "", unparsed: [], sentences: [] };
 
 function openImport() {
   importState.files = [];
+  importState.rotations = [];
   importState.pairs = [];
   importState.raw = "";
   importState.unparsed = [];
@@ -825,6 +924,7 @@ function addFiles(fileList) {
   const images = Array.from(fileList).filter((f) => f.type.startsWith("image/") || /\.(png|jpe?g|webp|gif|bmp|avif|heic)$/i.test(f.name));
   const skipped = Array.from(fileList).length - images.length;
   importState.files = importState.files.concat(images);
+  importState.rotations = importState.rotations.concat(images.map(() => 0));
   renderThumbs();
   $("btn-run-ocr").disabled = importState.files.length === 0;
   if (skipped > 0) alert(`${skipped} bestand(en) overgeslagen: dat zijn geen afbeeldingen.`);
@@ -839,16 +939,35 @@ function renderThumbs() {
     const img = document.createElement("img");
     img.src = URL.createObjectURL(file);
     img.onload = () => URL.revokeObjectURL(img.src);
+    const hoek = importState.rotations[idx] || 0;
+    if (hoek) img.style.transform = `rotate(${hoek}deg)`;
+
     const del = document.createElement("button");
-    del.className = "thumb-del";
-    del.textContent = "×";
+    del.type = "button";
+    del.className = "thumb-btn thumb-del";
     del.title = "Verwijderen";
+    del.setAttribute("aria-label", "Screenshot verwijderen");
+    del.appendChild(svgIcon("i-trash", 14));
     del.addEventListener("click", () => {
       importState.files.splice(idx, 1);
+      importState.rotations.splice(idx, 1);
       renderThumbs();
       $("btn-run-ocr").disabled = importState.files.length === 0;
     });
-    wrap.append(img, del);
+
+    // Staat een foto op zijn kant, dan kun je hem hier rechtzetten.
+    const draai = document.createElement("button");
+    draai.type = "button";
+    draai.className = "thumb-btn thumb-rot";
+    draai.title = "Een kwartslag draaien";
+    draai.setAttribute("aria-label", "Een kwartslag draaien");
+    draai.appendChild(svgIcon("i-rotate", 14));
+    draai.addEventListener("click", () => {
+      importState.rotations[idx] = ((importState.rotations[idx] || 0) + 90) % 360;
+      renderThumbs();
+    });
+
+    wrap.append(img, draai, del);
     box.appendChild(wrap);
   });
 }
@@ -864,7 +983,7 @@ async function runOcr() {
   setProgress(0.01, "Starten…");
 
   try {
-    const result = await OCR.recognizeFiles(importState.files, setProgress);
+    const result = await OCR.recognizeFiles(importState.files, setProgress, importState.rotations);
     importState.raw = result.text;
     const { pairs, unparsed, sentences } = OCR.parseDocument(result);
     importState.pairs = pairs;
@@ -882,7 +1001,10 @@ async function runOcr() {
 
 function renderImportResult() {
   $("import-result").classList.remove("hidden");
-  $("import-count").textContent = `${importState.pairs.length} woordparen gevonden in ${importState.files.length} screenshot${importState.files.length === 1 ? "" : "s"}`;
+  const onzeker = importState.pairs.filter((p) => p[2]).length;
+  $("import-count").textContent =
+    `${importState.pairs.length} woordparen gevonden in ${importState.files.length} screenshot${importState.files.length === 1 ? "" : "s"}` +
+    (onzeker ? ` · ${onzeker} onzeker gelezen, even nakijken` : "");
   $("raw-text").textContent = importState.raw || "(geen tekst gevonden)";
 
   const sentenceBox = $("sentence-details");
@@ -917,14 +1039,19 @@ function renderPairsTable() {
     const row = document.createElement("div");
     row.className = "pair-row";
 
+    // Derde element staat op waar de OCR onzeker was; dat markeren we.
+    if (pair[2]) row.classList.add("onzeker");
+
     const fr = document.createElement("input");
     fr.type = "text";
     fr.value = pair[0];
+    if (pair[2]) fr.title = "Onzeker gelezen, even nakijken";
     fr.addEventListener("input", () => (importState.pairs[idx][0] = fr.value));
 
     const nl = document.createElement("input");
     nl.type = "text";
     nl.value = pair[1];
+    if (pair[2]) nl.title = "Onzeker gelezen, even nakijken";
     nl.addEventListener("input", () => (importState.pairs[idx][1] = nl.value));
 
     const del = document.createElement("button");
@@ -966,6 +1093,7 @@ function openSheet() {
   $("sheet-direction").value = settings.direction;
   $("sheet-strict").checked = settings.strictAccents;
   $("sheet-accentbar").checked = settings.showAccents;
+  $("sheet-sound").checked = settings.sound;
   $("sheet-backdrop").classList.remove("hidden");
   $("sheet-close").focus();
 }
@@ -1060,6 +1188,7 @@ $("sheet-direction").addEventListener("change", (e) => {
   settings.direction = e.target.value;
   Storage.saveSettings(settings);
   $("direction").value = settings.direction;
+  $("sound-on").checked = settings.sound;
   applyDirectionToSession();
 });
 $("sheet-strict").addEventListener("change", (e) => {
@@ -1067,6 +1196,17 @@ $("sheet-strict").addEventListener("change", (e) => {
   Storage.saveSettings(settings);
   $("strict-accents").checked = e.target.checked;
 });
+function setSound(on) {
+  settings.sound = on;
+  Storage.saveSettings(settings);
+  Sound.zetAan(on);
+  $("sound-on").checked = on;
+  $("sheet-sound").checked = on;
+  if (on) Sound.pop(2); // even laten horen
+}
+$("sound-on").addEventListener("change", (e) => setSound(e.target.checked));
+$("sheet-sound").addEventListener("change", (e) => setSound(e.target.checked));
+
 $("sheet-accentbar").addEventListener("change", (e) => {
   settings.showAccents = e.target.checked;
   Storage.saveSettings(settings);
@@ -1077,6 +1217,9 @@ $("direction").addEventListener("change", (e) => {
   settings.direction = e.target.value;
   Storage.saveSettings(settings);
 });
+
+$("btn-resume").addEventListener("click", resumeSession);
+$("btn-discard-resume").addEventListener("click", forgetSession);
 
 $("btn-edit-words").addEventListener("click", openWordEditor);
 $("btn-new-list").addEventListener("click", openNewListEditor);
@@ -1104,7 +1247,7 @@ $("btn-add-sentences").addEventListener("click", () => {
   renderImportResult();
 });
 $("btn-swap-cols").addEventListener("click", () => {
-  importState.pairs = importState.pairs.map(([a, b]) => [b, a]);
+  importState.pairs = importState.pairs.map((p) => (p[2] ? [p[1], p[0], p[2]] : [p[1], p[0]]));
   renderPairsTable();
 });
 

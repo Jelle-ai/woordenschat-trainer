@@ -33,56 +33,145 @@ const OCR = (() => {
   }
 
   // ---------- Beeld voorbereiden ----------
-  // Screenshots zijn vaak klein; opschalen en contrast verhogen scheelt veel leesfouten.
-  function fileToCanvas(file) {
+  const MIN_BREEDTE = 1000;  // hieronder opschalen
+  const DOEL_BREEDTE = 1400; // waar naartoe opgeschaald wordt
+  const MAX_ZIJDE = 2400;    // grote fotos verkleinen: sneller en scheelt geheugen
+
+  function laadAfbeelding(file) {
     return new Promise((resolve, reject) => {
       const url = URL.createObjectURL(file);
       const img = new Image();
-      img.onload = () => {
-        URL.revokeObjectURL(url);
-        const scale = img.naturalWidth < 1000 ? Math.min(3, 1400 / Math.max(img.naturalWidth, 1)) : 1;
-        const w = Math.round(img.naturalWidth * scale);
-        const h = Math.round(img.naturalHeight * scale);
-        const canvas = document.createElement("canvas");
-        canvas.width = w;
-        canvas.height = h;
-        const ctx = canvas.getContext("2d");
-        ctx.imageSmoothingEnabled = true;
-        ctx.imageSmoothingQuality = "high";
-        ctx.drawImage(img, 0, 0, w, h);
-
-        try {
-          const data = ctx.getImageData(0, 0, w, h);
-          const px = data.data;
-
-          // Donkere modus: OCR verwacht donkere tekst op een lichte achtergrond.
-          let sum = 0;
-          const step = Math.max(4, Math.floor(px.length / 4 / 20000) * 4);
-          let samples = 0;
-          for (let i = 0; i < px.length; i += step) {
-            sum += 0.299 * px[i] + 0.587 * px[i + 1] + 0.114 * px[i + 2];
-            samples++;
-          }
-          const invert = samples > 0 && sum / samples < 110;
-
-          for (let i = 0; i < px.length; i += 4) {
-            let g = 0.299 * px[i] + 0.587 * px[i + 1] + 0.114 * px[i + 2];
-            if (invert) g = 255 - g;
-            const c = Math.max(0, Math.min(255, (g - 128) * 1.35 + 128));
-            px[i] = px[i + 1] = px[i + 2] = c;
-          }
-          ctx.putImageData(data, 0, 0);
-        } catch (e) {
-          // Lukt niet bij sommige kleurprofielen; dan het onbewerkte beeld gebruiken.
-        }
-        resolve(canvas);
-      };
+      img.onload = () => { URL.revokeObjectURL(url); resolve(img); };
       img.onerror = () => {
         URL.revokeObjectURL(url);
-        reject(new Error("Dit bestand kon de browser niet openen als afbeelding: " + file.name));
+        const naam = file.name || "dit bestand";
+        const heic = /\.(heic|heif)$/i.test(naam);
+        reject(new Error(
+          heic
+            ? `${naam} is een HEIC-bestand; browsers kunnen dat niet openen. Bewaar of deel het als JPEG of PNG.`
+            : `${naam} kon de browser niet openen als afbeelding.`
+        ));
       };
       img.src = url;
     });
+  }
+
+  // Verschil tussen de lichtste en donkerste beeldhoek. Bij een foto van een
+  // boekpagina is dat groot; bij een screenshot vrijwel nul.
+  function lichtSpreiding(grijs, w, h, blokken) {
+    const bw = Math.max(1, Math.floor(w / blokken));
+    const bh = Math.max(1, Math.floor(h / blokken));
+    let laagste = Infinity;
+    let hoogste = -Infinity;
+    for (let by = 0; by + bh <= h; by += bh) {
+      for (let bx = 0; bx + bw <= w; bx += bw) {
+        let som = 0;
+        let n = 0;
+        for (let y = by; y < by + bh; y += 2) {
+          for (let x = bx; x < bx + bw; x += 2) {
+            som += grijs[y * w + x];
+            n++;
+          }
+        }
+        if (!n) continue;
+        const gem = som / n;
+        if (gem < laagste) laagste = gem;
+        if (gem > hoogste) hoogste = gem;
+      }
+    }
+    return hoogste > laagste ? hoogste - laagste : 0;
+  }
+
+  // Plaatselijke drempel via een somtabel: bij een foto van een boekpagina is de
+  // ene hoek lichter dan de andere, en dan faalt één vaste drempel.
+  function plaatselijkeDrempel(grijs, w, h) {
+    const som = new Int32Array((w + 1) * (h + 1));
+    for (let y = 0; y < h; y++) {
+      let rij = 0;
+      for (let x = 0; x < w; x++) {
+        rij += grijs[y * w + x];
+        som[(y + 1) * (w + 1) + (x + 1)] = som[y * (w + 1) + (x + 1)] + rij;
+      }
+    }
+    const r = Math.max(8, Math.round(Math.min(w, h) * 0.06)); // venster rond elke pixel
+    const uit = new Uint8ClampedArray(w * h);
+    for (let y = 0; y < h; y++) {
+      const y0 = Math.max(0, y - r);
+      const y1 = Math.min(h - 1, y + r);
+      for (let x = 0; x < w; x++) {
+        const x0 = Math.max(0, x - r);
+        const x1 = Math.min(w - 1, x + r);
+        const oppervlak = (y1 - y0 + 1) * (x1 - x0 + 1);
+        const totaal =
+          som[(y1 + 1) * (w + 1) + (x1 + 1)] - som[y0 * (w + 1) + (x1 + 1)] -
+          som[(y1 + 1) * (w + 1) + x0] + som[y0 * (w + 1) + x0];
+        const gemiddelde = totaal / oppervlak;
+        // Iets onder het plaatselijke gemiddelde telt als inkt.
+        uit[y * w + x] = grijs[y * w + x] < gemiddelde - 8 ? 0 : 255;
+      }
+    }
+    return uit;
+  }
+
+  // Zet een bestand om naar een canvas dat OCR goed kan lezen.
+  async function fileToCanvas(file, draaiing) {
+    const img = await laadAfbeelding(file);
+
+    let bw = img.naturalWidth;
+    let bh = img.naturalHeight;
+    let schaal = 1;
+    if (bw < MIN_BREEDTE) schaal = Math.min(3, DOEL_BREEDTE / Math.max(bw, 1));
+    const langsteZijde = Math.max(bw, bh) * schaal;
+    if (langsteZijde > MAX_ZIJDE) schaal *= MAX_ZIJDE / langsteZijde;
+
+    const w = Math.round(bw * schaal);
+    const h = Math.round(bh * schaal);
+    const kwart = ((draaiing || 0) % 360 + 360) % 360;
+    const gedraaid = kwart === 90 || kwart === 270;
+
+    const canvas = document.createElement("canvas");
+    canvas.width = gedraaid ? h : w;
+    canvas.height = gedraaid ? w : h;
+    const ctx = canvas.getContext("2d");
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
+    ctx.save();
+    ctx.translate(canvas.width / 2, canvas.height / 2);
+    ctx.rotate((kwart * Math.PI) / 180);
+    ctx.drawImage(img, -w / 2, -h / 2, w, h);
+    ctx.restore();
+
+    const cw = canvas.width;
+    const ch = canvas.height;
+    try {
+      const data = ctx.getImageData(0, 0, cw, ch);
+      const px = data.data;
+
+      // Grijswaarden, en meteen kijken of het beeld donker is (donkere modus).
+      const grijs = new Uint8ClampedArray(cw * ch);
+      let totaal = 0;
+      for (let i = 0, j = 0; i < px.length; i += 4, j++) {
+        const g = 0.299 * px[i] + 0.587 * px[i + 1] + 0.114 * px[i + 2];
+        grijs[j] = g;
+        totaal += g;
+      }
+      const gemiddeld = totaal / (cw * ch);
+      if (gemiddeld < 110) for (let j = 0; j < grijs.length; j++) grijs[j] = 255 - grijs[j];
+
+      // Ongelijk licht? Dan een plaatselijke drempel, anders gewoon contrast.
+      const spreiding = lichtSpreiding(grijs, cw, ch, 8);
+      const resultaat = spreiding > 55 ? plaatselijkeDrempel(grijs, cw, ch) : null;
+      for (let j = 0; j < grijs.length; j++) {
+        const v = resultaat ? resultaat[j] : Math.max(0, Math.min(255, (grijs[j] - 128) * 1.35 + 128));
+        const i = j * 4;
+        px[i] = px[i + 1] = px[i + 2] = v;
+        px[i + 3] = 255;
+      }
+      ctx.putImageData(data, 0, 0);
+    } catch (e) {
+      // Lukt niet bij sommige kleurprofielen; dan het onbewerkte beeld gebruiken.
+    }
+    return canvas;
   }
 
   // ---------- OCR draaien ----------
@@ -95,7 +184,7 @@ const OCR = (() => {
             const text = (w.text || "").trim();
             const b = w.bbox;
             if (!text || !b) continue;
-            words.push({ text, x0: b.x0, x1: b.x1, y0: b.y0, y1: b.y1 });
+            words.push({ text, x0: b.x0, x1: b.x1, y0: b.y0, y1: b.y1, conf: w.confidence == null ? 100 : w.confidence });
           }
         }
       }
@@ -103,7 +192,7 @@ const OCR = (() => {
     return words;
   }
 
-  async function recognizeFiles(files, onProgress) {
+  async function recognizeFiles(files, onProgress, rotaties) {
     const T = await ensureTesseract();
     onProgress(0.02, "Taalbestanden laden (eenmalig)…");
 
@@ -122,9 +211,12 @@ const OCR = (() => {
       const pages = [];
       const texts = [];
       for (let i = 0; i < files.length; i++) {
-        onProgress(0.2 + (i / files.length) * 0.75, `Screenshot ${i + 1} van ${files.length} lezen…`);
-        const canvas = await fileToCanvas(files[i]);
-        const { data } = await worker.recognize(canvas);
+        const deel = (stap) => 0.2 + ((i + stap) / files.length) * 0.75;
+        onProgress(deel(0), `Screenshot ${i + 1} van ${files.length} klaarmaken…`);
+        const canvas = await fileToCanvas(files[i], rotaties ? rotaties[i] : 0);
+        onProgress(deel(0.35), `Screenshot ${i + 1} van ${files.length} lezen…`);
+        // rotateAuto zet een scheef gefotografeerde pagina recht.
+        const { data } = await worker.recognize(canvas, { rotateAuto: true });
         texts.push(data.text || "");
         pages.push({ words: extractWords(data), width: canvas.width });
       }
@@ -219,7 +311,14 @@ const OCR = (() => {
       if (!best || distance < best.distance) best = { i, distance };
     }
     if (!best) return null;
-    return [joinWords(words.slice(0, best.i + 1)), joinWords(words.slice(best.i + 1))];
+    const links = words.slice(0, best.i + 1);
+    const rechts = words.slice(best.i + 1);
+    return [joinWords(links), joinWords(rechts), Math.min(laagsteZekerheid(links), laagsteZekerheid(rechts))];
+  }
+
+  // Laagste zekerheid van een groepje woorden; onder de 70 is het twijfelachtig.
+  function laagsteZekerheid(words) {
+    return words.reduce((laag, w) => Math.min(laag, w.conf == null ? 100 : w.conf), 100);
   }
 
   function joinWords(words) {
@@ -294,11 +393,12 @@ const OCR = (() => {
     return null;
   }
 
-  function acceptPair(pair, out, rawLine) {
+  function acceptPair(pair, out, rawLine, zekerheid) {
     if (!pair) {
       if (rawLine) out.unparsed.push(rawLine);
       return;
     }
+    const conf = pair[2] != null ? pair[2] : zekerheid;
     const [a, b] = [cleanLine(pair[0]), cleanLine(pair[1])];
     if (!a || !b) {
       if (rawLine) out.unparsed.push(rawLine);
@@ -312,7 +412,8 @@ const OCR = (() => {
       out.sentences.push([a, b]);
       return;
     }
-    out.pairs.push([a, b]);
+    // Derde element markeert een regel die de OCR onzeker las.
+    out.pairs.push(conf != null && conf < 70 ? [a, b, true] : [a, b]);
   }
 
   // Parsen op basis van woordposities (twee kolommen).
@@ -330,15 +431,16 @@ const OCR = (() => {
       if (HEADER_RE.test(text)) continue;
 
       // Staat er een expliciet scheidingsteken, dan wint dat van de kolompositie.
+      const zekerheid = laagsteZekerheid(line.words);
       if (EXPLICIT_SEP.test(text)) {
-        acceptPair(splitLine(text), out, text);
+        acceptPair(splitLine(text), out, text, zekerheid);
         continue;
       }
 
       if (colX != null) {
         const parts = splitAtColumn(line, colX, threshold);
         if (parts) {
-          acceptPair(parts, out, text);
+          acceptPair(parts, out, text, zekerheid);
           continue;
         }
         // Geen gat op de kolomgrens: dit is een regel over de volle breedte,
@@ -349,7 +451,7 @@ const OCR = (() => {
         }
       }
 
-      acceptPair(splitLine(text), out, text);
+      acceptPair(splitLine(text), out, text, zekerheid);
     }
     return true;
   }
@@ -380,7 +482,7 @@ const OCR = (() => {
       asIs += frenchScore(a) + dutchScore(b);
       swapped += frenchScore(b) + dutchScore(a);
     }
-    return swapped > asIs ? pairs.map(([a, b]) => [b, a]) : pairs;
+    return swapped > asIs ? pairs.map((p) => (p[2] ? [p[1], p[0], p[2]] : [p[1], p[0]])) : pairs;
   }
 
   // Alleen platte tekst (geen posities beschikbaar).
