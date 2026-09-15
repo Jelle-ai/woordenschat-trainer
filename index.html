@@ -2,12 +2,23 @@
 <html lang="nl">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
   <title>Woordenschat Trainer — Frans</title>
+  <meta name="description" content="Franse woordenschat leren door te typen: eerst de letters uit de bubbels, daarna uit het hoofd.">
+  <meta name="theme-color" content="#eef1f6" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#eef1f6">
+  <link rel="manifest" href="manifest.json">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🫧</text></svg>">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Woorden">
+  <meta name="mobile-web-app-capable" content="yes">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <button id="btn-fullscreen" class="fs-btn hidden" type="button" title="Volledig scherm" aria-label="Volledig scherm">⛶</button>
+
   <main class="app">
 
     <!-- ===== Startscherm ===== -->
@@ -165,6 +176,12 @@
 
   </main>
 
+  <script>
+    // Offline kunnen oefenen op de telefoon; werkt alleen via http(s), niet via file://
+    if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
+      addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+    }
+  </script>
   <script src="words.js"></script>
   <script src="storage.js"></script>
   <script src="ocr.js"></script>

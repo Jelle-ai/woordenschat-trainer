@@ -786,5 +786,43 @@ document.addEventListener("keydown", (e) => {
 $("screen-learn").addEventListener("click", () => $("learn-input").focus());
 $("screen-drill").addEventListener("click", () => $("drill-input").focus());
 
+// ---------- Volledig scherm ----------
+// iPhone-Safari kent de Fullscreen API niet voor gewone elementen; daar is de
+// app-installatie ("Zet op beginscherm") de weg naar een schermvullende app.
+(function setupFullscreen() {
+  const btn = $("btn-fullscreen");
+  const root = document.documentElement;
+  const supported = !!(root.requestFullscreen || root.webkitRequestFullscreen);
+  const standalone =
+    matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+
+  if (!supported || standalone) return; // knop blijft verborgen
+  btn.classList.remove("hidden");
+
+  function isFullscreen() {
+    return !!(document.fullscreenElement || document.webkitFullscreenElement);
+  }
+
+  function sync() {
+    const on = isFullscreen();
+    btn.textContent = on ? "⛶" : "⛶";
+    btn.title = on ? "Volledig scherm verlaten" : "Volledig scherm";
+    btn.setAttribute("aria-label", btn.title);
+    btn.classList.toggle("active", on);
+  }
+
+  btn.addEventListener("click", () => {
+    if (isFullscreen()) {
+      (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+    } else {
+      (root.requestFullscreen || root.webkitRequestFullscreen).call(root);
+    }
+  });
+
+  document.addEventListener("fullscreenchange", sync);
+  document.addEventListener("webkitfullscreenchange", sync);
+  sync();
+})();
+
 buildAccentBars();
 goHome();

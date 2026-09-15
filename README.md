@@ -68,12 +68,36 @@ bewaard.
 - Eigen lijsten ook met de hand te typen of te plakken (`frans = nederlands`)
 - Meerdere lijsten naast elkaar, met een startlijst van 60 veelgebruikte woorden
 
-## Starten
+## Op de telefoon
+
+De app is gebouwd om schermvullend te werken: de kaart met de oefening staat in
+het midden, de accentknoppen blijven onderaan binnen duimbereik, ook wanneer het
+schermtoetsenbord openschuift. Notches en de streep onderaan worden ontzien.
+
+Je kunt hem als app installeren:
+
+- **Android (Chrome):** menu → *App installeren* / *Toevoegen aan startscherm*
+- **iPhone (Safari):** deelknop → *Zet op beginscherm*
+
+Daarna start hij zonder adresbalk op en werkt hij offline — ook het herkennen van
+screenshots, zodra je dat één keer gebruikt hebt (dan staan de taalbestanden in
+de cache). Op de computer en op Android zit er rechtsboven een knop voor
+volledig scherm; iPhone-Safari kent die functie niet, daar is de installatie de
+weg naar een schermvullende app.
+
+## Deployen
+
+`main` wordt automatisch gepubliceerd op GitHub Pages via
+`.github/workflows/pages.yml`. Zet daarvoor eenmalig in de repo
+**Settings → Pages → Source** op **GitHub Actions**.
+
+## Lokaal draaien
 
 ```bash
 python3 -m http.server 8000
 # → http://localhost:8000
 ```
 
-Openen via `file://` werkt niet voor de screenshot-import: de OCR-worker heeft
-een echte server nodig. De rest van de app werkt wel gewoon.
+Openen via `file://` werkt niet voor de screenshot-import en de offline-modus:
+de OCR-worker en de service worker hebben een echte server nodig. De rest van de
+app werkt wel gewoon.

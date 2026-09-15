@@ -1,0 +1,52 @@
+name: Deploy naar GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Eén deploy tegelijk; een lopende deploy niet afbreken.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Controleer dat alles wat de app nodig heeft aanwezig is
+        run: |
+          set -e
+          for f in index.html style.css app.js storage.js ocr.js words.js \
+                   manifest.json sw.js icon-192.png icon-512.png \
+                   vendor/tesseract/tesseract.min.js \
+                   vendor/tesseract/worker.min.js \
+                   vendor/tesseract/tesseract-core-simd-lstm.wasm.js \
+                   vendor/tesseract/lang/fra.traineddata.gz \
+                   vendor/tesseract/lang/nld.traineddata.gz; do
+            [ -f "$f" ] || { echo "ontbreekt: $f"; exit 1; }
+          done
+          node --check app.js
+          node --check ocr.js
+          node --check storage.js
+          node --check words.js
+          node --check sw.js
+          node -e "JSON.parse(require('fs').readFileSync('manifest.json','utf8'))"
+          echo "alles aanwezig"
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+      - id: deployment
+        uses: actions/deploy-pages@v4
